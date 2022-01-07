@@ -1,0 +1,7 @@
+1. deploy `Token.sol` implementation with no args
+2. deploy `ERC1967Proxy.sol` with args:
+  - `_logic` is the address of the implementation
+  - to call the implementation's `initialize` function (without args), use `_data` `0x8129fc1c`
+3. deploy `TokenV2.sol` second implementation with no args
+4. call `upgradeTo` function to the new implementation
+5. add new roles if needed
