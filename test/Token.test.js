@@ -48,6 +48,7 @@ describe('Token', function () {
 
     // add minter role
     const MINTER_ROLE = await upgraded.MINTER_ROLE()
+    console.log({MINTER_ROLE})
     await upgraded.grantRole(MINTER_ROLE, owner.address)
 
     // mint 1
@@ -139,5 +140,65 @@ describe('Token', function () {
     expect(await proxy.symbol()).to.equal('PLEB')
     expect(await upgraded.name()).to.equal('PlebToken')
     expect(await upgraded.symbol()).to.equal('PLEB')
+
+    // upgrade to TokenV3
+    const TokenV3 = await ethers.getContractFactory('TokenV3');
+    const tokenV3 = await upgrades.upgradeProxy(proxy.address, TokenV3);
+
+    // check data is still the same after upgrade
+    expect(await tokenV3.name()).to.equal('PlebToken')
+    expect(await tokenV3.symbol()).to.equal('PLEB')
+    balance = (await tokenV3.balanceOf(user2.address)).toString()
+    expect(balance).to.equal('30')
+    await expectRevert(
+      tokenV3.connect(user2).claimAirdrop('30', proof),
+      'claimAirdrop: airdrop already claimed'
+    )
+
+    // prepare to set airdrop merkle root2
+    const recipients2 = {[owner.address]: '100', [user1.address]: '200', [user2.address]: '300'}
+    const elements2 = []
+    for (recipientAddress in recipients2) {
+      const recipientAmount = recipients2[recipientAddress]
+      elements2.push(ethers.utils.solidityPack(['address', 'uint256'], [recipientAddress, recipientAmount]))
+    }
+    const merkleTree2 = new MerkleTree(elements2, keccak256, { hashLeaves: true, sortPairs: true });
+    const root2 = merkleTree2.getHexRoot();
+    console.log({recipients2, elements2, root2})
+    expect(await tokenV3.airdropMerkleRoot2()).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000')
+    expect(root2).not.to.equal(root)
+
+    // set airdrop merkle root2
+    await tokenV3.setAirdropMerkleRoot2(root2)
+    expect(await tokenV3.airdropMerkleRoot2()).to.equal(root2)
+    expect(await tokenV3.airdropMerkleRoot2()).not.to.equal(await tokenV3.airdropMerkleRoot())
+
+    // first airdrop still works
+    await expectRevert(
+      tokenV3.connect(user2).claimAirdrop('30', proof),
+      'claimAirdrop: airdrop already claimed'
+    )
+
+    // second airdrop works
+    leaf = keccak256(elements2[1])
+    proof = merkleTree2.getHexProof(leaf);
+    console.log({leaf: leaf.toString('hex'), proof})
+    // check if airdrop is claimed
+    expect(await tokenV3.airdropIsClaimed2(user1.address, '200', proof)).to.equal(false)
+    await tokenV3.connect(user1).claimAirdrop2('200', proof)
+    balance = (await tokenV3.balanceOf(user1.address)).toString()
+    expect(balance).to.equal('220')
+    // check if airdrop is claimed
+    expect(await tokenV3.airdropIsClaimed2(user1.address, '200', proof)).to.equal(true)
+
+    // third airdrop doesn't work yet
+    await expectRevert(
+      tokenV3.connect(user1).claimAirdrop3('200', proof),
+      'claimAirdrop3: merkle proof invalid'
+    )
+    await expectRevert(
+      tokenV3.connect(user1).claimAirdrop3('200', []),
+      'claimAirdrop3: merkle proof invalid'
+    )
   });
 });
