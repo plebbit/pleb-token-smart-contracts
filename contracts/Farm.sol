@@ -22,16 +22,15 @@ contract Farm is Ownable {
     }
 
     IToken public token;
-
-    uint256 public bonusEndBlock;
     uint256 public tokenPerBlock;
     uint256 public bonusMultiplier;
+    uint256 public startBlock;
+    uint256 public bonusEndBlock;
 
     PoolInfo[] public poolInfo;
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     mapping (address => bool) private poolIsAdded;
     uint256 public totalAllocPoint = 0;
-    uint256 public startBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
