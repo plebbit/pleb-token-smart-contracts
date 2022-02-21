@@ -59,6 +59,19 @@ const deployLps = async () => {
 }
 
 describe('Farm', () => {
+  it('test token', async () => {
+    const [owner, user1] = await ethers.getSigners()
+    const Token = await ethers.getContractFactory('TestToken')
+    const token = await Token.deploy('TestToken', 'TEST')
+    assert.equal(await token.name(), 'TestToken')
+    assert.equal(await token.symbol(), 'TEST')
+    await token.mint(owner.address, '1000' + zeros)
+    assert.equal(await token.balanceOf(owner.address), '1000' + zeros)
+    assert.equal(await token.totalSupply(), '1000' + zeros)
+    await token.setMinter(user1.address)
+    await token.connect(user1).mint(user1.address, '1000' + zeros)
+  })
+
   it('setters and getters', async () => {
     const [owner, user1, user2, user3] = await ethers.getSigners()
     const token = await deployToken()
@@ -288,25 +301,25 @@ describe('Farm', () => {
     await farm.connect(user2).deposit('0', '100')
     await advanceBlockTo('950')
     await farm.connect(user2).deposit('0', '0')
-    assert.equal((await token.balanceOf(user2.address)).toString(), '0')
+    assert.equal(await token.balanceOf(user2.address), '0')
     await advanceBlockTo('1000')
     await farm.connect(user2).deposit('0', '0')
-    assert.equal((await token.balanceOf(user2.address)).toString(), '99000000000000000000')
+    assert.equal(await token.balanceOf(user2.address), '99000000000000000000')
     await advanceBlockTo('1050')
     await farm.connect(user2).deposit('0', '0')
-    assert.equal((await token.balanceOf(user2.address)).toString(), '2549000000000000000000')
+    assert.equal(await token.balanceOf(user2.address), '2549000000000000000000')
     await farm.connect(user2).deposit('0', '0')
-    assert.equal((await token.balanceOf(user2.address)).toString(), '2597000000000000000000')
+    assert.equal(await token.balanceOf(user2.address), '2597000000000000000000')
     await advanceBlockTo('1090')
     await farm.connect(user2).deposit('0', '0')
-    assert.equal((await token.balanceOf(user2.address)).toString(), '2987000000000000000000')
+    assert.equal(await token.balanceOf(user2.address), '2987000000000000000000')
     await farm.connect(user2).deposit('0', '0')
-    assert.equal((await token.balanceOf(user2.address)).toString(), '2997000000000000000000')
+    assert.equal(await token.balanceOf(user2.address), '2997000000000000000000')
     await advanceBlockTo('1100')
     await farm.connect(user2).deposit('0', '0')
-    assert.equal((await token.balanceOf(user2.address)).toString(), '3087000000000000000000')
+    assert.equal(await token.balanceOf(user2.address), '3087000000000000000000')
     await farm.connect(user2).deposit('0', '0')
-    assert.equal((await token.balanceOf(user2.address)).toString(), '3097000000000000000000')
+    assert.equal(await token.balanceOf(user2.address), '3097000000000000000000')
   })
 
   it.skip('calculate inflation over 2 month (fast)', async () => {
@@ -314,19 +327,23 @@ describe('Farm', () => {
     const token = await deployToken()
     await token.mint(owner.address, '1000000000000' + zeros) // 1 tril
     const dailyTokens = 5000000000 // 5 bil
-    const tokensPerBlocks = Math.round(dailyTokens / 5500 / 10)
-    const twoMonthsOfBlocks = 550 * 60
-    const farm = await deployFarm(token, tokensPerBlocks + zeros + '0', '20', '550', twoMonthsOfBlocks)
+    const tokensPerBlocks = Math.round(dailyTokens / 4220 / 10)
+    const twoMonthsOfBlocks = 4220 * 60
+    const farmArgs = [tokensPerBlocks + zeros, '20', '4220', twoMonthsOfBlocks]
+    const farm = await deployFarm(token, ...farmArgs)
+    // 118480000000000000000000, 20, 4220, 253200
+    // 11848000000000000000000, 20, 42200, 2532000
+    console.log('farm args:', farmArgs.join(', '))
     const [lp, lp2] = await deployLps()
 
     await farm.add('100', lp.address, true)
     await lp.connect(user2).approve(farm.address, '1000')
     await farm.connect(user2).deposit('0', '100')
-    await advanceBlockTo('550')
+    await advanceBlockTo('4220')
 
     const advanceDays = async (days) => {
       while (--days) {
-        let blocksPerDay = 550
+        let blocksPerDay = 4220
         while (--blocksPerDay) {
           await ethers.provider.send('evm_mine')
         }
@@ -363,24 +380,35 @@ describe('Farm', () => {
     console.info((await token.totalSupply()).toString().slice(0, -(18+9)) / 1000 + 'T')
   }).timeout(600000)
 
+  it('calculate farm args', () => {
+    const startBlock = 11188432 + 42200 * 8
+    const dailyTokens = 5000000000 // 5 bil
+    const tokensPerBlocks = Math.round(dailyTokens / 42200 / 10)
+    const twoMonthsOfBlocks = 42200 * 60
+    const farmArgs = [tokensPerBlocks + zeros, '20', startBlock, startBlock + twoMonthsOfBlocks]
+    console.log('farm args:', farmArgs.join(', '))
+  })
+
   it.skip('calculate inflation over 2 month (slow)', async () => {
     const [owner, user1, user2, user3] = await ethers.getSigners()
     const token = await deployToken()
     await token.mint(owner.address, '1000000000000' + zeros) // 1 tril
     const dailyTokens = 5000000000 // 5 bil
-    const tokensPerBlocks = Math.round(dailyTokens / 5500 / 10)
-    const twoMonthsOfBlocks = 5500 * 60
-    const farm = await deployFarm(token, tokensPerBlocks + zeros, '20', '5500', twoMonthsOfBlocks)
+    const tokensPerBlocks = Math.round(dailyTokens / 42200 / 10)
+    const twoMonthsOfBlocks = 42200 * 60
+    const farmArgs = [tokensPerBlocks + zeros, '20', '42200', twoMonthsOfBlocks]
+    console.log('farm args:', farmArgs.join(', '))
+    const farm = await deployFarm(token, ...farmArgs)
     const [lp, lp2] = await deployLps()
 
     await farm.add('100', lp.address, true)
     await lp.connect(user2).approve(farm.address, '1000')
     await farm.connect(user2).deposit('0', '100')
-    await advanceBlockTo('5500')
+    await advanceBlockTo('42200')
 
     const advanceDays = async (days) => {
       while (--days) {
-        let blocksPerDay = 5500
+        let blocksPerDay = 42200
         while (--blocksPerDay) {
           await ethers.provider.send('evm_mine')
         }
