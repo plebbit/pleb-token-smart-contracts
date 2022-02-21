@@ -196,6 +196,12 @@ contract Farm is Ownable {
         emit Deposit(msg.sender, _pid, _amount);
     }
 
+    // deposit lp tokens without approve
+    function depositWithPermit(uint256 _pid, uint256 _amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s) public {
+        IToken(address(poolInfo[_pid].lpToken)).permit(address(msg.sender), address(this), _amount, deadline, v, r, s);
+        deposit(_pid, _amount);
+    }
+
     // withdraw lp tokens
     function withdraw(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
@@ -234,4 +240,5 @@ interface IToken {
     function balanceOf(address account) external view returns (uint256);
     function transfer(address recipient, uint256 amount) external returns (bool);
     function mint(address to, uint256 amount) external;
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;
 }
