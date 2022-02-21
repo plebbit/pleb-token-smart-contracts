@@ -1,3 +1,5 @@
+token
+
 1. deploy `Token.sol` implementation with no args
 2. deploy `ERC1967Proxy.sol` with args:
   - `_logic` is the address of the implementation
@@ -5,3 +7,9 @@
 3. deploy `TokenV2.sol` second implementation with no args
 4. call `upgradeTo` function to the new implementation
 5. add new roles if needed
+
+farm
+
+1. deploy `Farm.sol` with args and token address
+2. add pool on farm with "100", "lp address", true
+3. add role minter on token to farm address
