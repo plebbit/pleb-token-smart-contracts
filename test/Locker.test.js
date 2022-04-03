@@ -93,6 +93,7 @@ describe('Locker', () => {
     assert.equal(lockEvent._amount, '200')
     assert.equal((await token.balanceOf(locker.address)), 200)
     assert.equal((await locker.balanceOf('0', owner.address)), 200)
+    assert.equal((await locker.totalSupply('0')), 200)
 
     // lock tokens in pool 2
     await expectRevert(locker.lock('10', '100'), 'locker: _timeAmountIndex does not exist')
@@ -106,6 +107,7 @@ describe('Locker', () => {
     assert.equal(lockEvent._amount, '500')
     assert.equal((await token.balanceOf(locker.address)), 700)
     assert.equal((await locker.balanceOf('1', owner.address)), 500)
+    assert.equal((await locker.totalSupply('1')), 500)
 
     // unlock tokens in pool 1
     balance = await token.balanceOf(owner.address)
@@ -117,6 +119,7 @@ describe('Locker', () => {
     assert.equal((await token.balanceOf(owner.address)), balance.toNumber() + 200)
     assert.equal((await token.balanceOf(locker.address)), 500)
     assert.equal((await locker.balanceOf('0', owner.address)), 0)
+    assert.equal((await locker.totalSupply('0')), 0)
     await expectRevert(locker.unlock('0'), 'locker: _timeAmountIndex balance is 0')
 
     // unlock tokens in pool 2
@@ -129,6 +132,7 @@ describe('Locker', () => {
     assert.equal((await token.balanceOf(owner.address)), balance.toNumber() + 500)
     assert.equal((await token.balanceOf(locker.address)), 0)
     assert.equal((await locker.balanceOf('1', owner.address)), 0)
+    assert.equal((await locker.totalSupply('1')), 0)
     await expectRevert(locker.unlock('1'), 'locker: _timeAmountIndex balance is 0')
 
     // fail to unlock pool 3
@@ -153,6 +157,9 @@ describe('Locker', () => {
     assert.equal((await token.balanceOf(user1.address)), 0)
     assert.equal((await token.balanceOf(user2.address)), 0)
     assert.equal((await token.balanceOf(user3.address)), 0)
+    assert.equal((await locker.totalSupply('0')), 3000)
+    assert.equal((await locker.totalSupply('1')), 3000)
+    assert.equal((await locker.totalSupply('2')), 3000)
     await expectRevert(locker.unlock('0'), 'locker: _timeAmountIndex balance is 0')
     await locker.connect(user1).unlock('0')
     await expectRevert(locker.connect(user1).unlock('0'), 'locker: _timeAmountIndex balance is 0')
@@ -171,6 +178,9 @@ describe('Locker', () => {
     assert.equal((await token.balanceOf(user2.address)), 3000)
     assert.equal((await token.balanceOf(user3.address)), 3000)
     assert.equal((await token.balanceOf(locker.address)), 0)
+    assert.equal((await locker.totalSupply('0')), 0)
+    assert.equal((await locker.totalSupply('1')), 0)
+    assert.equal((await locker.totalSupply('2')), 0)
   })
 
   it(`don't unlock before time`, async () => {
