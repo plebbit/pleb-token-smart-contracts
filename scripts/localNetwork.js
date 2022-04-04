@@ -1,5 +1,6 @@
+// how to run:
 // npx hardhat node
-// npx hardhat run --network localhost scripts/farmLocalNetwork.js
+// npx hardhat run --network localhost scripts/localNetwork.js
 // set metamask network to http://localhost:8545 and chain id 31337
 
 const { ethers } = require('hardhat')
@@ -37,7 +38,7 @@ const deployLps = async () => {
   const [owner] = await ethers.getSigners()
   const JoePair = await ethers.getContractFactory('JoePair')
   const lp = await JoePair.deploy()
-  await lp.mint(owner.address, '10000' + zeros)
+  await lp.mint(owner.address, '100000000' + zeros)
   return [lp]
 }
 
@@ -53,7 +54,7 @@ const deployUsdcWavaxPair = async (wavax) => {
 
 const getMetamaskWallets = async () => {
   const [owner] = await ethers.getSigners()
-  const metamaskSeed = ''
+  const metamaskSeed = 'explain unfold dwarf labor collect strong tray remember review genre caught layer'
   const provider = new ethers.providers.JsonRpcProvider()
   const metamaskWallets = []
   let amount = 4
@@ -64,6 +65,19 @@ const getMetamaskWallets = async () => {
     await owner.sendTransaction({to: wallet.address, value: ethers.utils.parseEther('1')})
   }
   return metamaskWallets
+}
+
+const deployLocker = async (token, minAmount) => {
+  const Locker = await ethers.getContractFactory('Locker')
+  const startTimestamp = Math.round(Date.now() / 1000)
+  const day = 60 * 60 * 24
+  const timeAmounts = [
+    [startTimestamp+day*90, minAmount*6 + zeros],
+    [startTimestamp+day*180, minAmount*3 + zeros],
+    [startTimestamp+day*360, minAmount + zeros]
+  ]
+  const locker = await Locker.deploy(token.address, timeAmounts)
+  return locker
 }
 
 const deployMulticall = async () => {
@@ -85,32 +99,59 @@ setInterval(() => {
   const multicall = await deployMulticall()
   const metamaskWallets = await getMetamaskWallets()
   const token = await deployToken()
+  await token.mint(owner.address, '1000000000000' + zeros)
   const wavax = await deployToken()
   await wavax.mint(owner.address, '1000000' + zeros)
   const {usdcWavaxPair, usdc} = await deployUsdcWavaxPair(wavax)
   const farmArgs = ['90909000000000000000000', '20', '0', '330000']
   const farm = await deployFarm(token, ...farmArgs)
   const [lp] = await deployLps()
-  await wavax.mint(lp.address, '1000' + zeros)
-  await token.mint(lp.address, '1000000000' + zeros)
+  await wavax.mint(lp.address, '100' + zeros)
+  await token.transfer(lp.address, '100000000000' + zeros)
   await farm.add('100', lp.address, true)
 
-  // metamask 1 setup
-  await lp.transfer(metamaskWallets[0].address, '1000' + zeros)
+  // metamask 1 setup farm
+  await lp.transfer(metamaskWallets[0].address, '1000000' + zeros)
 
-  // metamask 2 setup
-  await lp.transfer(metamaskWallets[1].address, '1000' + zeros)
-  await lp.connect(metamaskWallets[1]).approve(farm.address, '500' + zeros)
-  await farm.connect(metamaskWallets[1]).deposit('0', '250' + zeros)
+  // metamask 2 setup farm
+  await lp.transfer(metamaskWallets[1].address, '1000000' + zeros)
+  await lp.connect(metamaskWallets[1]).approve(farm.address, '500000' + zeros)
+  await farm.connect(metamaskWallets[1]).deposit('0', '250000' + zeros)
 
-  // metamask 3 setup
-  await lp.transfer(metamaskWallets[2].address, '1000' + zeros)
-  await lp.connect(metamaskWallets[2]).approve(farm.address, '1000' + zeros)
-  await farm.connect(metamaskWallets[2]).deposit('0', '1000' + zeros)
+  // metamask 3 setup farm
+  await lp.transfer(metamaskWallets[2].address, '1000000' + zeros)
+  await lp.connect(metamaskWallets[2]).approve(farm.address, '1000000' + zeros)
+  await farm.connect(metamaskWallets[2]).deposit('0', '1000000' + zeros)
 
-  console.log('metamask1: 1000LP, 0 deposited', metamaskWallets[0].address)
-  console.log('metamask2: 750LP, 250 deposited', metamaskWallets[1].address)
-  console.log('metamask3: 0LP, 1000 deposited', metamaskWallets[2].address)
+  // lockers
+  const plebMinAmount = 100000000
+  const plebLocker = await deployLocker(token, plebMinAmount)
+  const lpMinAmount = 1500
+  const lpLocker = await deployLocker(lp, lpMinAmount)
+
+  // metamask 1 setup farm
+  await lp.transfer(metamaskWallets[0].address, '1000000' + zeros)
+  await token.transfer(metamaskWallets[0].address, '10000000000' + zeros)
+
+  // metamask 2 setup lockers
+  await lp.transfer(metamaskWallets[1].address, '50000' + zeros)
+  await lp.connect(metamaskWallets[1]).approve(lpLocker.address, '50000' + zeros)
+  await lpLocker.connect(metamaskWallets[1]).lock('0', '25000' + zeros)
+  await token.transfer(metamaskWallets[1].address, '1000000000' + zeros)
+  await token.connect(metamaskWallets[1]).approve(plebLocker.address, '600000000' + zeros)
+  await plebLocker.connect(metamaskWallets[1]).lock('0', '600000000' + zeros)
+
+  // metamask 3 setup lockers
+  await lp.transfer(metamaskWallets[2].address, '10000' + zeros)
+  await lp.connect(metamaskWallets[2]).approve(lpLocker.address, '10000' + zeros)
+  await lpLocker.connect(metamaskWallets[2]).lock('1', '10000' + zeros)
+  await token.transfer(metamaskWallets[2].address, '1000000000' + zeros)
+  await token.connect(metamaskWallets[2]).approve(plebLocker.address, '1000000000' + zeros)
+  await plebLocker.connect(metamaskWallets[2]).lock('1', '1000000000' + zeros)
+
+  console.log('metamask1: 1000000LP, 0 deposited', metamaskWallets[0].address)
+  console.log('metamask2: 750000LP, 250000 deposited', metamaskWallets[1].address)
+  console.log('metamask3: 0LP, 1000000 deposited', metamaskWallets[2].address)
   console.log('metamask4: 0LP, 0 deposited', metamaskWallets[3].address)
   console.log('farm args:', farmArgs.join(', '))
   console.log(`
@@ -124,6 +165,8 @@ setInterval(() => {
   "farmAddress": "${farm.address}",
   "multicallAddress": "${multicall.address}",
   "farmingTimestamp": ${Date.now()},
+  "xplebPlebLockerAddress": "${plebLocker.address}",
+  "xplebLpLockerAddress": "${lpLocker.address}"
 }
 `)
   console.log('setup finished')
