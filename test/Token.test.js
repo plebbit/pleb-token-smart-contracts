@@ -20,14 +20,14 @@ const expectRevert = async (promise, revertString) => {
 
 describe('Token', function () {
   it('deploys', async function () {
-    const [owner, user1, user2, user3] = await ethers.getSigners();
+    const [owner, user1, user2, user3] = await ethers.getSigners()
 
-    const Token = await ethers.getContractFactory('Token');
-    const TokenV2 = await ethers.getContractFactory('TokenV2');
+    const Token = await ethers.getContractFactory('Token')
+    const TokenV2 = await ethers.getContractFactory('TokenV2')
 
     // deploy initial proxy
-    const proxy = await upgrades.deployProxy(Token, { kind: 'uups' });
-    await proxy.deployed();
+    const proxy = await upgrades.deployProxy(Token, { kind: 'uups' })
+    await proxy.deployed()
     console.log('proxy address:', proxy.address)
     console.log('owner address:', owner.address)
 
@@ -38,7 +38,7 @@ describe('Token', function () {
     expect(await proxy.symbol()).to.equal('PLEB')
 
     // upgrade
-    const upgraded = await upgrades.upgradeProxy(proxy.address, TokenV2);
+    const upgraded = await upgrades.upgradeProxy(proxy.address, TokenV2)
 
     // try to mint without minter role
     await expectRevert(
@@ -71,15 +71,15 @@ describe('Token', function () {
       const recipientAmount = recipients[recipientAddress]
       elements.push(ethers.utils.solidityPack(['address', 'uint256'], [recipientAddress, recipientAmount]))
     }
-    const merkleTree = new MerkleTree(elements, keccak256, { hashLeaves: true, sortPairs: true });
-    const root = merkleTree.getHexRoot();
+    const merkleTree = new MerkleTree(elements, keccak256, { hashLeaves: true, sortPairs: true })
+    const root = merkleTree.getHexRoot()
     console.log({recipients, elements, root})
     expect(await upgraded.airdropMerkleRoot()).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000')
 
     // try to claim airdrop before merkle root is set
     let leaf, proof
     leaf = keccak256(elements[1])
-    proof = merkleTree.getHexProof(leaf);
+    proof = merkleTree.getHexProof(leaf)
     await expectRevert(
       upgraded.connect(user1).claimAirdrop('20', proof),
       'claimAirdrop: merkle proof invalid'
@@ -95,7 +95,7 @@ describe('Token', function () {
 
     // try to claim airdrop with wrong amount
     leaf = keccak256(elements[1])
-    proof = merkleTree.getHexProof(leaf);
+    proof = merkleTree.getHexProof(leaf)
     await expectRevert(
       upgraded.connect(user1).claimAirdrop('19', proof),
       'claimAirdrop: merkle proof invalid'
@@ -103,7 +103,7 @@ describe('Token', function () {
 
     // try to claim airdrop with incorrect proof
     leaf = keccak256(elements[0])
-    proof = merkleTree.getHexProof(leaf);
+    proof = merkleTree.getHexProof(leaf)
     await expectRevert(
       upgraded.connect(user1).claimAirdrop('20', proof),
       'claimAirdrop: merkle proof invalid'
@@ -111,7 +111,7 @@ describe('Token', function () {
 
     // try to claim airdrop with correct proof
     leaf = keccak256(elements[1])
-    proof = merkleTree.getHexProof(leaf);
+    proof = merkleTree.getHexProof(leaf)
     console.log({leaf: leaf.toString('hex'), proof})
     // check if airdrop is claimed
     expect(await upgraded.airdropIsClaimed(user1.address, '20', proof)).to.equal(false)
@@ -129,7 +129,7 @@ describe('Token', function () {
 
     // try to claim airdrop with correct proof with other user
     leaf = keccak256(elements[2])
-    proof = merkleTree.getHexProof(leaf);
+    proof = merkleTree.getHexProof(leaf)
     console.log({leaf: leaf.toString('hex'), proof})
     await upgraded.connect(user2).claimAirdrop('30', proof)
     balance = (await upgraded.balanceOf(user2.address)).toString()
@@ -142,8 +142,8 @@ describe('Token', function () {
     expect(await upgraded.symbol()).to.equal('PLEB')
 
     // upgrade to TokenV3
-    const TokenV3 = await ethers.getContractFactory('TokenV3');
-    const tokenV3 = await upgrades.upgradeProxy(proxy.address, TokenV3);
+    const TokenV3 = await ethers.getContractFactory('TokenV3')
+    const tokenV3 = await upgrades.upgradeProxy(proxy.address, TokenV3)
 
     // check data is still the same after upgrade
     expect(await tokenV3.name()).to.equal('PlebToken')
@@ -162,8 +162,8 @@ describe('Token', function () {
       const recipientAmount = recipients2[recipientAddress]
       elements2.push(ethers.utils.solidityPack(['address', 'uint256'], [recipientAddress, recipientAmount]))
     }
-    const merkleTree2 = new MerkleTree(elements2, keccak256, { hashLeaves: true, sortPairs: true });
-    const root2 = merkleTree2.getHexRoot();
+    const merkleTree2 = new MerkleTree(elements2, keccak256, { hashLeaves: true, sortPairs: true })
+    const root2 = merkleTree2.getHexRoot()
     console.log({recipients2, elements2, root2})
     expect(await tokenV3.airdropMerkleRoot2()).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000')
     expect(root2).not.to.equal(root)
@@ -181,7 +181,7 @@ describe('Token', function () {
 
     // second airdrop works
     leaf = keccak256(elements2[1])
-    proof = merkleTree2.getHexProof(leaf);
+    proof = merkleTree2.getHexProof(leaf)
     console.log({leaf: leaf.toString('hex'), proof})
     // check if airdrop is claimed
     expect(await tokenV3.airdropIsClaimed2(user1.address, '200', proof)).to.equal(false)
@@ -200,5 +200,53 @@ describe('Token', function () {
       tokenV3.connect(user1).claimAirdrop3('200', []),
       'claimAirdrop3: merkle proof invalid'
     )
-  });
-});
+
+    // remove merkle root
+    expect(await tokenV3.airdropMerkleRoot()).not.to.equal('0x0000000000000000000000000000000000000000000000000000000000000000')
+    await tokenV3.setAirdropMerkleRoot('0x0000000000000000000000000000000000000000000000000000000000000000')
+    expect(await tokenV3.airdropMerkleRoot()).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000')
+
+    // upgrade to TokenV4
+    const TokenV4 = await ethers.getContractFactory('TokenV4')
+    const tokenV4 = await upgrades.upgradeProxy(proxy.address, TokenV4)
+
+    // check data is still the same after upgrade
+    expect(tokenV4.address).to.equal(proxy.address)
+    expect(await tokenV4.name()).to.equal('PlebToken')
+    expect(await tokenV4.symbol()).to.equal('PLEB')
+    balance = (await tokenV4.balanceOf(user2.address)).toString()
+    expect(balance).to.equal('30')
+    await expectRevert(
+      tokenV4.connect(user2).claimAirdrop('30', proof),
+      'claimAirdrop: merkle proof invalid'
+    )
+
+    // test migrating locker
+    expect((await tokenV4.balanceOf('0x88467491BBBaff6833Ab6cd81F04c94a2281f0c6')).toString()).to.equal('0')
+    expect((await tokenV4.balanceOf('0x7DB134260b0BE15d5C2Ec8d9246fD51765BF69fc')).toString()).to.equal('0')
+    await tokenV4.mint('0x88467491BBBaff6833Ab6cd81F04c94a2281f0c6', '10')
+    expect((await tokenV4.balanceOf('0x88467491BBBaff6833Ab6cd81F04c94a2281f0c6')).toString()).to.equal('10')
+    await expectRevert(
+      tokenV4.connect(user2).migrateLocker(),
+      'AccessControl: account 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc is missing role 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6'
+    )
+    await tokenV4.migrateLocker()
+    expect((await tokenV4.balanceOf('0x7DB134260b0BE15d5C2Ec8d9246fD51765BF69fc')).toString()).to.equal('10')
+
+    // recover tokens sent to contract
+    await expectRevert(
+      tokenV4.connect(user2).recoverTokensSentToContract(tokenV4.address, owner.address, '30'),
+      'AccessControl: account 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc is missing role 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6'
+    )
+    await expectRevert(
+      tokenV4.recoverTokensSentToContract(tokenV4.address, owner.address, '30'),
+      'ERC20: transfer amount exceeds balance'
+    )
+    await tokenV4.connect(user2).transfer(tokenV4.address, '30')
+    expect((await tokenV4.balanceOf(user2.address)).toString()).to.equal('0')
+    expect((await tokenV4.balanceOf(tokenV4.address)).toString()).to.equal('30')
+    await tokenV4.recoverTokensSentToContract(tokenV4.address, user2.address, '30')
+    expect((await tokenV4.balanceOf(user2.address)).toString()).to.equal('30')
+    expect((await tokenV4.balanceOf(tokenV4.address)).toString()).to.equal('0')
+  })
+})

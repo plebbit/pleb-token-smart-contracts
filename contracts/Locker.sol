@@ -40,12 +40,6 @@ contract Locker is Ownable {
         }
     }
 
-    // if someone sends wrong tokens to this contract, owner can send them back
-    function recoverWrongTokensSentToContract(IERC20 _token, address _address, uint256 _balance) public onlyOwner {
-        require(token != _token, 'locker: only recover wrong tokens');
-        _token.transfer(_address, _balance);
-    }
-
     // edit pool
     function setTimeAmount(uint256 _timeAmountIndex, TimeAmount memory _timeAmounts) public onlyOwner {
         timeAmounts[_timeAmountIndex] = _timeAmounts;
@@ -61,6 +55,22 @@ contract Locker is Ownable {
         isLocking = _isLocking;
     }
 
+    // if someone sends wrong tokens to this contract, owner can send them back
+    function recoverWrongTokensSentToContract(IERC20 _token, address _address, uint256 _balance) public onlyOwner {
+        _token.transfer(_address, _balance);
+    }
+
+    // migrate from a previous locker
+    function migrateFrom(address[] memory _addresses, uint256[] memory _timeAmountIndexes, uint256[] memory _amounts) public onlyOwner {
+        uint256 i = 0;
+        while (i < _addresses.length) {
+            balanceOf[_timeAmountIndexes[i]][_addresses[i]] += _amounts[i];
+            emit Lock(_addresses[i], _timeAmountIndexes[i], _amounts[i]);
+            totalSupply[_timeAmountIndexes[i]] += _amounts[i];
+            i++;
+        }
+    }
+
     function lock(uint256 _timeAmountIndex, uint256 _amount) public requireIsLocking {
         require(_timeAmountIndex < timeAmounts.length, 'locker: _timeAmountIndex does not exist');
         TimeAmount memory timeAmount = timeAmounts[_timeAmountIndex];
@@ -68,7 +78,7 @@ contract Locker is Ownable {
 
         // transfer the token
         token.transferFrom(msg.sender, address(this), _amount);
-        balanceOf[_timeAmountIndex][msg.sender] = _amount;
+        balanceOf[_timeAmountIndex][msg.sender] += _amount;
         emit Lock(msg.sender, _timeAmountIndex, _amount);
 
         // update total supply

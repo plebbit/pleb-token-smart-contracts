@@ -8,6 +8,11 @@ token
 4. call `upgradeTo` function to the new implementation
 5. add new roles if needed
 
+new implementation
+
+1. deploy `TokenVX.sol` implementation with no args
+2. call `upgradeTo` function to the new implementation
+
 farm
 
 1. deploy `Farm.sol` with args and token address

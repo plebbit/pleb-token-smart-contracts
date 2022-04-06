@@ -183,6 +183,94 @@ describe('Locker', () => {
     assert.equal((await locker.totalSupply('2')), 0)
   })
 
+  it('lock twice', async () => {
+    const [owner, user1, user2, user3] = await ethers.getSigners()
+    const token = await deployToken()
+    const Locker = await ethers.getContractFactory('Locker')
+    const locker = await Locker.deploy(token.address, [[100, 200], [200, 400], [1, 2]])
+    await token.mint(owner.address, 500)
+    await token.approve(locker.address, 500)
+
+    let receipt, lockEvent, unlockEvent, balance
+
+    // lock tokens once
+    assert.equal((await token.balanceOf(locker.address)), 0)
+    assert.equal((await locker.balanceOf('0', owner.address)), 0)
+    receipt = await (await locker.lock('0', '200')).wait()
+    lockEvent = receipt.events?.filter((event) => event.event === "Lock")[0]?.args
+    assert.equal(lockEvent._address, owner.address)
+    assert.equal(lockEvent._timeAmountIndex, '0')
+    assert.equal(lockEvent._amount, '200')
+    assert.equal((await token.balanceOf(locker.address)), 200)
+    assert.equal((await locker.balanceOf('0', owner.address)), 200)
+    assert.equal((await locker.totalSupply('0')), 200)
+
+    // lock tokens twice
+    assert.equal((await token.balanceOf(locker.address)), 200)
+    assert.equal((await locker.balanceOf('0', owner.address)), 200)
+    receipt = await (await locker.lock('0', '300')).wait()
+    lockEvent = receipt.events?.filter((event) => event.event === "Lock")[0]?.args
+    assert.equal(lockEvent._address, owner.address)
+    assert.equal(lockEvent._timeAmountIndex, '0')
+    assert.equal(lockEvent._amount, '300')
+    assert.equal((await token.balanceOf(locker.address)), 500)
+    assert.equal((await locker.balanceOf('0', owner.address)), 500)
+    assert.equal((await locker.totalSupply('0')), 500)
+
+    // unlock tokens
+    balance = await token.balanceOf(owner.address)
+    receipt = await (await locker.unlock('0')).wait()
+    unlockEvent = receipt.events?.filter((event) => event.event === "Unlock")[0]?.args
+    assert.equal(unlockEvent._address, owner.address)
+    assert.equal(unlockEvent._timeAmountIndex, '0')
+    assert.equal(unlockEvent._amount, '500')
+    assert.equal((await token.balanceOf(owner.address)), 500)
+    assert.equal((await token.balanceOf(locker.address)), 0)
+    assert.equal((await locker.balanceOf('0', owner.address)), 0)
+    assert.equal((await locker.totalSupply('0')), 0)
+    await expectRevert(locker.unlock('0'), 'locker: _timeAmountIndex balance is 0')
+  })
+
+  it('migrate from previous locker', async () => {
+    const [owner, user1, user2, user3] = await ethers.getSigners()
+    const token = await deployToken()
+    const Locker = await ethers.getContractFactory('Locker')
+    const locker = await Locker.deploy(token.address, [[100, 200], [200, 400], [1, 2]])
+    await token.mint(user1.address, 1000)
+    await token.mint(user2.address, 1000)
+    await token.mint(user3.address, 1000)
+
+    // migrate
+    assert.equal((await locker.balanceOf('0', user1.address)), 0)
+    assert.equal((await locker.balanceOf('1', user1.address)), 0)
+    assert.equal((await locker.balanceOf('0', user2.address)), 0)
+    assert.equal((await locker.balanceOf('2', user3.address)), 0)
+    const migrateFromArgs = [
+      [user1.address, user1.address, user2.address, user3.address],
+      [0, 1, 0, 2],
+      [200, 400, 200, 2],
+    ]
+    await locker.migrateFrom(...migrateFromArgs)
+    assert.equal((await locker.balanceOf('0', user1.address)), 200)
+    assert.equal((await locker.balanceOf('1', user1.address)), 400)
+    assert.equal((await locker.balanceOf('0', user2.address)), 200)
+    assert.equal((await locker.balanceOf('2', user3.address)), 2)
+
+    // withdraw
+    await expectRevert(locker.connect(user1).unlock('0'), 'ERC20: transfer amount exceeds balance')
+    await token.mint(locker.address, 200)
+    await locker.connect(user1).unlock('0')
+    await expectRevert(locker.connect(user1).unlock('1'), 'ERC20: transfer amount exceeds balance')
+    await token.mint(locker.address, 400)
+    await locker.connect(user1).unlock('1')
+    await expectRevert(locker.connect(user2).unlock('0'), 'ERC20: transfer amount exceeds balance')
+    await token.mint(locker.address, 200)
+    await locker.connect(user2).unlock('0')
+    await expectRevert(locker.connect(user3).unlock('2'), 'ERC20: transfer amount exceeds balance')
+    await token.mint(locker.address, 2)
+    await locker.connect(user3).unlock('2')
+  })
+
   it(`don't unlock before time`, async () => {
     const [owner] = await ethers.getSigners()
     const token = await deployToken()
@@ -257,7 +345,6 @@ describe('Locker', () => {
     await token.mint(locker.address, '100000')
     await wrongToken.mint(locker.address, '100000')
 
-    await expectRevert(locker.recoverWrongTokensSentToContract(token.address, owner.address, '100'), 'locker: only recover wrong tokens')
     await expectRevert(locker.connect(user1).recoverWrongTokensSentToContract(wrongToken.address, owner.address, '100'), 'Ownable: caller is not the owner')
     await locker.recoverWrongTokensSentToContract(wrongToken.address, owner.address, '100')
     assert.equal(await wrongToken.balanceOf(owner.address), 100)
