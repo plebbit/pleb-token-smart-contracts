@@ -11,7 +11,7 @@ try {
 }
 catch (e) {} 
 const provider = new ethers.providers.JsonRpcProvider({url: 'https://api.avax.network/ext/bc/C/rpc'}, 43114)
-const hoursToGet = 24 * 30
+const hoursToGet = 24 * 10
 const maxBlocks = 2048
 
 const getTotalLocked = () => {
@@ -84,7 +84,12 @@ const getEvents = async (contractAddress) => {
 ;(async () => {
   getTotalLocked()
   for (const contractAddress in eventsDatabase) {
-    await getEvents(contractAddress)
+    try {
+      await getEvents(contractAddress)
+    }
+    catch (e) {
+      console.log(e)
+    }
   }
   getTotalLocked()
 })()
