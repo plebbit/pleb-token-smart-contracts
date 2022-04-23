@@ -12,7 +12,7 @@ const expectRevert = async (promise, revertString) => {
     error = e
   }
   finally {
-    assert.equal(error.message, `VM Exception while processing transaction: reverted with reason string '${revertString}'`)
+    assert.equal(error?.message, `VM Exception while processing transaction: reverted with reason string '${revertString}'`)
   }
 }
 
