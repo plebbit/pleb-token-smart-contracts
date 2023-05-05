@@ -18,7 +18,7 @@ const expectRevert = async (promise, revertString) => {
   }
 }
 
-describe('Token', function () {
+describe.only('Token', function () {
   it('deploys', async function () {
     const [owner, user1, user2, user3] = await ethers.getSigners()
 
@@ -248,5 +248,38 @@ describe('Token', function () {
     await tokenV4.recoverTokensSentToContract(tokenV4.address, user2.address, '30')
     expect((await tokenV4.balanceOf(user2.address)).toString()).to.equal('30')
     expect((await tokenV4.balanceOf(tokenV4.address)).toString()).to.equal('0')
+
+    // upgrade to TokenV5
+    const TokenV5 = await ethers.getContractFactory('TokenV5')
+    const tokenV5 = await upgrades.upgradeProxy(proxy.address, TokenV5)
+
+    // check that balances are frozen
+    balance = (await tokenV5.balanceOf(user1.address)).toString()
+    expect(balance).to.equal('220')
+    totalSupply = (await tokenV5.totalSupply()).toString()
+    expect(totalSupply).to.equal('261')
+    await expectRevert(
+      tokenV5.connect(user1).transfer(user2.address, '10'),
+      'token migrated to ethereum'
+    )
+    await expectRevert(
+      tokenV5.connect(user1).transferFrom(user1.address, user2.address, '10'),
+      'token migrated to ethereum'
+    )
+    await expectRevert(
+      tokenV5.connect(user1).burn('10'),
+      'token migrated to ethereum'
+    )
+    await expectRevert(
+      tokenV5.connect(user1).burnFrom(user1.address, '10'),
+      'token migrated to ethereum'
+    )
+
+    await tokenV5.connect(user1).transfer('0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', '10')
+    await tokenV5.connect(user1).transferFrom(user1.address, '0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', '10')
+    await expectRevert(
+      tokenV5.connect(user1).transferFrom('0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', user1.address, '10'),
+      'token migrated to ethereum'
+    )
   })
 })

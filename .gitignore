@@ -1,3 +1,13 @@
+TODO.md
+artifacts
+cache
+scripts/*.json
+scripts/locker-snowtrace
+scripts/farm-snowtrace
+scripts/lp-snowtrace
+scripts/lp2-snowtrace
+scripts/token-snowtrace
+
 # Logs
 logs
 *.log
