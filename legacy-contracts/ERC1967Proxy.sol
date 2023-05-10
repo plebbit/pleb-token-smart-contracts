@@ -5,15 +5,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Upgrade.sol";
 
-// this PLEB token is being migrated from the AVAX token 0x625fc9bb971bb305a2ad63252665dcfe9098bee9
-// development started on Sep 16, 2021 https://github.com/plebbit/whitepaper/discussions/2
-
-// project name: plebbit
-// websites: plebbitapp.eth.limo, plebbitapp.eth.link, plebchan.eth.limo, plebchan.eth.link, plebbit.eth.limo, plebbit.eth.link
-// telegram: t.me/plebbit
-// twitter: twitter.com/getplebbit
-// github: github.com/plebbit
-
 /**
  * @dev This contract implements an upgradeable proxy. It is upgradeable because calls are delegated to an
  * implementation address that can be changed. This address is stored in storage in the location specified by

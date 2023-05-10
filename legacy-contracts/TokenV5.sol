@@ -65,24 +65,16 @@ contract TokenV5 is
     }
 
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-        if (recipient == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
-            _transfer(msg.sender, recipient, amount);
-            return true;
+        if (recipient == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) || sender == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
+            return super.transfer(recipient, amount);
         }
         revert("token migrated to ethereum");
         return true;
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
-        if (recipient == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
-            _transfer(sender, recipient, amount);
-            return true;
-        }
-        if (sender == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
-            if (recipient == 0xDC63069D6f920C6300065Ac28ACd05B1F7B3B0c1 || recipient == 0x0f7A712E9F2D25160A7DC0c24324036C47EA951B) {
-                _transfer(sender, recipient, amount);
-                return true;
-            }
+        if (recipient == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) || sender == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
+            return super.transferFrom(sender, recipient, amount);
         }
         revert("token migrated to ethereum");
         return true;
