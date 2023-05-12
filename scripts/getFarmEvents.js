@@ -10,7 +10,8 @@ try {
 }
 catch (e) {} 
 const provider = new ethers.providers.JsonRpcProvider({url: 'https://api.avax.network/ext/bc/C/rpc'}, 43114)
-const startBlock = 11202146
+// const startBlock = 11202146 // original start block
+const startBlock = 29894851
 const maxBlocks = 2048
 
 const getTotal = () => {
@@ -44,7 +45,7 @@ const getEvents = async (contractAddress) => {
   const endBlock = await provider.getBlockNumber()
 
   let currentBlock = startBlock
-  while (currentBlock <= endBlock) {
+  while (currentBlock < endBlock) {
     const previousCurrentBlock = currentBlock
     currentBlock += maxBlocks
     if (currentBlock > endBlock) {

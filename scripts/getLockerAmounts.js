@@ -3,13 +3,7 @@ const {ethers} = require('ethers')
 const fs = require('fs')
 
 const eventsDatabasePath = __dirname + '/lockerEvents.json'
-let eventsDatabase = {
-  '0x7DB134260b0BE15d5C2Ec8d9246fD51765BF69fc': {},
-}
-try {
-   eventsDatabase = require(eventsDatabasePath)
-}
-catch (e) {}
+const eventsDatabase = require(eventsDatabasePath)
 
 let amountsDatabase = {}
 const amountsDatabasePath = __dirname + '/lockerAmounts.json'
