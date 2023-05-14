@@ -100,13 +100,6 @@ console.log(amounts)
 const addresses = Object.keys(amounts).length
 console.log('total', format(total), 'recipients', `${addresses}/${addressesBefore}`)
 
-// const addressesArray = []
-// const amountsArray = []
-// for (const address in amounts) {
-//   addressesArray.push(address)
-//   amountsArray.push(amounts[amount])
-// }
-
 const transactions = []
 let transactionAddresses = []
 let transactionAmounts = []
