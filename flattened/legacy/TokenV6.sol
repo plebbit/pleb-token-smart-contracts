@@ -1,16 +1,3 @@
-/* 
-
-this PLEB token is migrated from the AVAX token 0x625fc9bb971bb305a2ad63252665dcfe9098bee9
-development started on Sep 16, 2021 https://github.com/plebbit/whitepaper/discussions/2
-
-project name: plebbit
-websites: plebbitapp.eth.limo, plebbitapp.eth.link, plebchan.eth.limo, plebchan.eth.link, plebbit.eth.limo, plebbit.eth.link
-telegram: t.me/plebbit
-twitter: twitter.com/getplebbit
-github: github.com/plebbit
-
-*/
-
 pragma solidity ^0.8.0;
 
 /**
@@ -2209,11 +2196,72 @@ abstract contract ERC20BurnableUpgradeable is Initializable, ContextUpgradeable,
 
 pragma solidity ^0.8.0;
 
-contract TokenStorage {
-    // put variables here
+/**
+ * @dev Library for managing uint256 to bool mapping in a compact and efficient way, providing the keys are sequential.
+ * Largely inspired by Uniswap's https://github.com/Uniswap/merkle-distributor/blob/master/contracts/MerkleDistributor.sol[merkle-distributor].
+ */
+library BitMapsUpgradeable {
+    struct BitMap {
+        mapping(uint256 => uint256) _data;
+    }
+
+    /**
+     * @dev Returns whether the bit at `index` is set.
+     */
+    function get(BitMap storage bitmap, uint256 index) internal view returns (bool) {
+        uint256 bucket = index >> 8;
+        uint256 mask = 1 << (index & 0xff);
+        return bitmap._data[bucket] & mask != 0;
+    }
+
+    /**
+     * @dev Sets the bit at `index` to the boolean `value`.
+     */
+    function setTo(
+        BitMap storage bitmap,
+        uint256 index,
+        bool value
+    ) internal {
+        if (value) {
+            set(bitmap, index);
+        } else {
+            unset(bitmap, index);
+        }
+    }
+
+    /**
+     * @dev Sets the bit at `index`.
+     */
+    function set(BitMap storage bitmap, uint256 index) internal {
+        uint256 bucket = index >> 8;
+        uint256 mask = 1 << (index & 0xff);
+        bitmap._data[bucket] |= mask;
+    }
+
+    /**
+     * @dev Unsets the bit at `index`.
+     */
+    function unset(BitMap storage bitmap, uint256 index) internal {
+        uint256 bucket = index >> 8;
+        uint256 mask = 1 << (index & 0xff);
+        bitmap._data[bucket] &= ~mask;
+    }
 }
 
-contract Token is 
+pragma solidity ^0.8.0;
+
+contract TokenStorage {
+    BitMapsUpgradeable.BitMap internal claimedAirdrop;
+    bytes32 public airdropMerkleRoot;
+    BitMapsUpgradeable.BitMap internal claimedAirdrop2;
+    bytes32 public airdropMerkleRoot2;
+    BitMapsUpgradeable.BitMap internal claimedAirdrop3;
+    bytes32 public airdropMerkleRoot3;
+    BitMapsUpgradeable.BitMap internal claimedAirdrop4;
+    bytes32 public airdropMerkleRoot4;
+}
+
+contract TokenV6 is 
     Initializable, 
     ERC20Upgradeable, 
     ERC20BurnableUpgradeable, 
@@ -2221,50 +2269,48 @@ contract Token is
     UUPSUpgradeable,
     TokenStorage
 {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
-    bytes32 public constant MIGRATOR_ROLE = keccak256("MIGRATOR_ROLE");
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
     function initialize() initializer public {
-        __ERC20_init("Plebbit", "PLEB");
+        __ERC20_init("", "");
         __ERC20Burnable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MINTER_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
     }
 
-    // needed to mint the initial supply
-    function mint(address to, uint256 amount) public onlyRole(MIGRATOR_ROLE) {
-        _mint(to, amount);
+    using BitMapsUpgradeable for BitMapsUpgradeable.BitMap;
+    event ClaimAirdrop(address indexed claimant, uint256 amount);
+    event AirdropMerkleRootChanged(bytes32 merkleRoot);
+
+    function burn(uint256 amount) public override {
+        revert("token migrated to ethereum");
     }
 
-    // needed to migrate distribute the initial supply to everyone
-    function migrate(address[] memory _addresses, uint256[] memory _amounts) public onlyRole(MIGRATOR_ROLE) {
-        uint256 i = 0;
-        while (i < _addresses.length) {
-            _transfer(msg.sender,  _addresses[i], _amounts[i]);
-            i++;
-        }
+    function burnFrom(address account, uint256 amount) public override {
+        revert("token migrated to ethereum");
     }
 
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-        if (hasRole(MIGRATOR_ROLE, recipient) || hasRole(MIGRATOR_ROLE, msg.sender)) {
-            return super.transfer(recipient, amount);
-        }
-        revert("migration not finished");
+        revert("token migrated to ethereum");
         return true;
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
-        if (hasRole(MIGRATOR_ROLE, recipient) || hasRole(MIGRATOR_ROLE, sender)) {
-            return super.transferFrom(sender, recipient, amount);
-        }
-        revert("migration not finished");
+        revert("token migrated to ethereum");
         return true;
+    }
+
+    // if someone sends tokens to this contract, minter can send them back
+    function recoverTokensSentToContract(ERC20Upgradeable _token, address _address, uint256 _amount) external onlyRole(MINTER_ROLE) {
+        _token.transfer(_address, _amount);
     }
 
     function _authorizeUpgrade(address newImplementation)

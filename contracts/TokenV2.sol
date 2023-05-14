@@ -7,15 +7,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-// this PLEB token is being migrated from the AVAX token 0x625fc9bb971bb305a2ad63252665dcfe9098bee9
-// development started on Sep 16, 2021 https://github.com/plebbit/whitepaper/discussions/2
-
-// project name: plebbit
-// websites: plebbitapp.eth.limo, plebbitapp.eth.link, plebchan.eth.limo, plebchan.eth.link, plebbit.eth.limo, plebbit.eth.link
-// telegram: t.me/plebbit
-// twitter: twitter.com/getplebbit
-// github: github.com/plebbit
-
 contract TokenStorage {
     // put variables here
 }
@@ -29,6 +20,7 @@ contract TokenV2 is
     TokenStorage
 {
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant MIGRATOR_ROLE = keccak256("MIGRATOR_ROLE");
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
@@ -41,6 +33,11 @@ contract TokenV2 is
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(UPGRADER_ROLE, msg.sender);
+    }
+
+    // if someone sends tokens to this contract, admin can send them back
+    function recoverTokensSentToContract(ERC20Upgradeable _token, address _address, uint256 _amount) external onlyRole(MIGRATOR_ROLE) {
+        _token.transfer(_address, _amount);
     }
 
     function _authorizeUpgrade(address newImplementation)

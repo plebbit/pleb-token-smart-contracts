@@ -1,3 +1,16 @@
+/* 
+
+this PLEB token is migrated from the AVAX token 0x625fc9bb971bb305a2ad63252665dcfe9098bee9
+development started on Sep 16, 2021 https://github.com/plebbit/whitepaper/discussions/2
+
+project name: plebbit
+websites: plebbitapp.eth.limo, plebbitapp.eth.link, plebchan.eth.limo, plebchan.eth.link, plebbit.eth.limo, plebbit.eth.link
+telegram: t.me/plebbit
+twitter: twitter.com/getplebbit
+github: github.com/plebbit
+
+*/
+
 pragma solidity ^0.8.0;
 
 /**
