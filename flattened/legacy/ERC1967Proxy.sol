@@ -1,56 +1,85 @@
-/* 
-
-this PLEB token is migrated from the AVAX token 0x625fc9bb971bb305a2ad63252665dcfe9098bee9
-development started on Sep 16, 2021 https://github.com/plebbit/whitepaper/discussions/2
-
-project name: plebbit
-websites: plebbitapp.eth.limo, plebbitapp.eth.link, plebchan.eth.limo, plebchan.eth.link, plebbit.eth.limo, plebbit.eth.link
-telegram: t.me/plebbit
-twitter: twitter.com/getplebbit
-github: github.com/plebbit
-
-*/
-
 pragma solidity ^0.8.0;
 
 /**
- * @dev ERC1822: Universal Upgradeable Proxy Standard (UUPS) documents a method for upgradeability through a simplified
- * proxy whose upgrades are fully controlled by the current implementation.
- */
-interface IERC1822Proxiable {
-    /**
-     * @dev Returns the storage slot that the proxiable contract assumes is being used to store the implementation
-     * address.
-     *
-     * IMPORTANT: A proxy pointing at a proxiable contract should not be considered proxiable itself, because this risks
-     * bricking a proxy that upgrades to it, by delegating to itself until out of gas. Thus it is critical that this
-     * function revert if invoked through a proxy.
-     */
-    function proxiableUUID() external view returns (bytes32);
-}
-
-pragma solidity ^0.8.0;
-
-/**
- * @dev ERC-1967: Proxy Storage Slots. This interface contains the events defined in the ERC.
+ * @dev This abstract contract provides a fallback function that delegates all calls to another contract using the EVM
+ * instruction `delegatecall`. We refer to the second contract as the _implementation_ behind the proxy, and it has to
+ * be specified by overriding the virtual {_implementation} function.
  *
- * _Available since v4.9._
+ * Additionally, delegation to the implementation can be triggered manually through the {_fallback} function, or to a
+ * different contract through the {_delegate} function.
+ *
+ * The success and return data of the delegated call will be returned back to the caller of the proxy.
  */
-interface IERC1967 {
+abstract contract Proxy {
     /**
-     * @dev Emitted when the implementation is upgraded.
+     * @dev Delegates the current call to `implementation`.
+     *
+     * This function does not return to its internall call site, it will return directly to the external caller.
      */
-    event Upgraded(address indexed implementation);
+    function _delegate(address implementation) internal virtual {
+        assembly {
+            // Copy msg.data. We take full control of memory in this inline assembly
+            // block because it will not return to Solidity code. We overwrite the
+            // Solidity scratch pad at memory position 0.
+            calldatacopy(0, 0, calldatasize())
+
+            // Call the implementation.
+            // out and outsize are 0 because we don't know the size yet.
+            let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
+
+            // Copy the returned data.
+            returndatacopy(0, 0, returndatasize())
+
+            switch result
+            // delegatecall returns 0 on error.
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
+        }
+    }
 
     /**
-     * @dev Emitted when the admin account has changed.
+     * @dev This is a virtual function that should be overriden so it returns the address to which the fallback function
+     * and {_fallback} should delegate.
      */
-    event AdminChanged(address previousAdmin, address newAdmin);
+    function _implementation() internal view virtual returns (address);
 
     /**
-     * @dev Emitted when the beacon is changed.
+     * @dev Delegates the current call to the address returned by `_implementation()`.
+     *
+     * This function does not return to its internall call site, it will return directly to the external caller.
      */
-    event BeaconUpgraded(address indexed beacon);
+    function _fallback() internal virtual {
+        _beforeFallback();
+        _delegate(_implementation());
+    }
+
+    /**
+     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
+     * function in the contract matches the call data.
+     */
+    fallback() external payable virtual {
+        _fallback();
+    }
+
+    /**
+     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
+     * is empty.
+     */
+    receive() external payable virtual {
+        _fallback();
+    }
+
+    /**
+     * @dev Hook that is called before falling back to the implementation. Can happen as part of a manual `_fallback`
+     * call, or as part of the Solidity `fallback` or `receive` functions.
+     *
+     * If overriden should call `super._beforeFallback()`.
+     */
+    function _beforeFallback() internal virtual {}
 }
 
 pragma solidity ^0.8.0;
@@ -67,7 +96,7 @@ interface IBeacon {
     function implementation() external view returns (address);
 }
 
-pragma solidity ^0.8.1;
+pragma solidity ^0.8.0;
 
 /**
  * @dev Collection of functions related to the address type
@@ -89,22 +118,17 @@ library Address {
      *  - an address where a contract will be created
      *  - an address where a contract lived, but was destroyed
      * ====
-     *
-     * [IMPORTANT]
-     * ====
-     * You shouldn't rely on `isContract` to protect against flash loan attacks!
-     *
-     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
-     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
-     * constructor.
-     * ====
      */
     function isContract(address account) internal view returns (bool) {
-        // This method relies on extcodesize/address.code.length, which returns 0
-        // for contracts in construction, since the code is only stored at the end
-        // of the constructor execution.
+        // This method relies on extcodesize, which returns 0 for contracts in
+        // construction, since the code is only stored at the end of the
+        // constructor execution.
 
-        return account.code.length > 0;
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 
     /**
@@ -149,7 +173,7 @@ library Address {
      * _Available since v3.1._
      */
     function functionCall(address target, bytes memory data) internal returns (bytes memory) {
-        return functionCallWithValue(target, data, 0, "Address: low-level call failed");
+        return functionCall(target, data, "Address: low-level call failed");
     }
 
     /**
@@ -198,8 +222,10 @@ library Address {
         string memory errorMessage
     ) internal returns (bytes memory) {
         require(address(this).balance >= value, "Address: insufficient balance for call");
+        require(isContract(target), "Address: call to non-contract");
+
         (bool success, bytes memory returndata) = target.call{value: value}(data);
-        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+        return verifyCallResult(success, returndata, errorMessage);
     }
 
     /**
@@ -223,8 +249,10 @@ library Address {
         bytes memory data,
         string memory errorMessage
     ) internal view returns (bytes memory) {
+        require(isContract(target), "Address: static call to non-contract");
+
         (bool success, bytes memory returndata) = target.staticcall(data);
-        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+        return verifyCallResult(success, returndata, errorMessage);
     }
 
     /**
@@ -248,37 +276,15 @@ library Address {
         bytes memory data,
         string memory errorMessage
     ) internal returns (bytes memory) {
+        require(isContract(target), "Address: delegate call to non-contract");
+
         (bool success, bytes memory returndata) = target.delegatecall(data);
-        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+        return verifyCallResult(success, returndata, errorMessage);
     }
 
     /**
-     * @dev Tool to verify that a low level call to smart-contract was successful, and revert (either by bubbling
-     * the revert reason or using the provided one) in case of unsuccessful call or if target was not a contract.
-     *
-     * _Available since v4.8._
-     */
-    function verifyCallResultFromTarget(
-        address target,
-        bool success,
-        bytes memory returndata,
-        string memory errorMessage
-    ) internal view returns (bytes memory) {
-        if (success) {
-            if (returndata.length == 0) {
-                // only check isContract if the call was successful and the return data is empty
-                // otherwise we already know that it was a contract
-                require(isContract(target), "Address: call to non-contract");
-            }
-            return returndata;
-        } else {
-            _revert(returndata, errorMessage);
-        }
-    }
-
-    /**
-     * @dev Tool to verify that a low level call was successful, and revert if it wasn't, either by bubbling the
-     * revert reason or using the provided one.
+     * @dev Tool to verifies that a low level call was successful, and revert if it wasn't, either by bubbling the
+     * revert reason using the provided one.
      *
      * _Available since v4.3._
      */
@@ -290,21 +296,17 @@ library Address {
         if (success) {
             return returndata;
         } else {
-            _revert(returndata, errorMessage);
-        }
-    }
+            // Look for revert reason and bubble it up if present
+            if (returndata.length > 0) {
+                // The easiest way to bubble the revert reason is using memory via assembly
 
-    function _revert(bytes memory returndata, string memory errorMessage) private pure {
-        // Look for revert reason and bubble it up if present
-        if (returndata.length > 0) {
-            // The easiest way to bubble the revert reason is using memory via assembly
-            /// @solidity memory-safe-assembly
-            assembly {
-                let returndata_size := mload(returndata)
-                revert(add(32, returndata), returndata_size)
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert(errorMessage);
             }
-        } else {
-            revert(errorMessage);
         }
     }
 }
@@ -358,7 +360,6 @@ library StorageSlot {
      * @dev Returns an `AddressSlot` with member `value` located at `slot`.
      */
     function getAddressSlot(bytes32 slot) internal pure returns (AddressSlot storage r) {
-        /// @solidity memory-safe-assembly
         assembly {
             r.slot := slot
         }
@@ -368,7 +369,6 @@ library StorageSlot {
      * @dev Returns an `BooleanSlot` with member `value` located at `slot`.
      */
     function getBooleanSlot(bytes32 slot) internal pure returns (BooleanSlot storage r) {
-        /// @solidity memory-safe-assembly
         assembly {
             r.slot := slot
         }
@@ -378,7 +378,6 @@ library StorageSlot {
      * @dev Returns an `Bytes32Slot` with member `value` located at `slot`.
      */
     function getBytes32Slot(bytes32 slot) internal pure returns (Bytes32Slot storage r) {
-        /// @solidity memory-safe-assembly
         assembly {
             r.slot := slot
         }
@@ -388,7 +387,6 @@ library StorageSlot {
      * @dev Returns an `Uint256Slot` with member `value` located at `slot`.
      */
     function getUint256Slot(bytes32 slot) internal pure returns (Uint256Slot storage r) {
-        /// @solidity memory-safe-assembly
         assembly {
             r.slot := slot
         }
@@ -405,7 +403,7 @@ pragma solidity ^0.8.2;
  *
  * @custom:oz-upgrades-unsafe-allow delegatecall
  */
-abstract contract ERC1967Upgrade is IERC1967 {
+abstract contract ERC1967Upgrade {
     // This is the keccak-256 hash of "eip1967.proxy.rollback" subtracted by 1
     bytes32 private constant _ROLLBACK_SLOT = 0x4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd9143;
 
@@ -415,6 +413,11 @@ abstract contract ERC1967Upgrade is IERC1967 {
      * validated in the constructor.
      */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
+    /**
+     * @dev Emitted when the implementation is upgraded.
+     */
+    event Upgraded(address indexed implementation);
 
     /**
      * @dev Returns the current implementation address.
@@ -462,23 +465,33 @@ abstract contract ERC1967Upgrade is IERC1967 {
      *
      * Emits an {Upgraded} event.
      */
-    function _upgradeToAndCallUUPS(
+    function _upgradeToAndCallSecure(
         address newImplementation,
         bytes memory data,
         bool forceCall
     ) internal {
-        // Upgrades from old implementations will perform a rollback test. This test requires the new
-        // implementation to upgrade back to the old, non-ERC1822 compliant, implementation. Removing
-        // this special case will break upgrade paths from old UUPS implementation to new ones.
-        if (StorageSlot.getBooleanSlot(_ROLLBACK_SLOT).value) {
-            _setImplementation(newImplementation);
-        } else {
-            try IERC1822Proxiable(newImplementation).proxiableUUID() returns (bytes32 slot) {
-                require(slot == _IMPLEMENTATION_SLOT, "ERC1967Upgrade: unsupported proxiableUUID");
-            } catch {
-                revert("ERC1967Upgrade: new implementation is not UUPS");
-            }
-            _upgradeToAndCall(newImplementation, data, forceCall);
+        address oldImplementation = _getImplementation();
+
+        // Initial upgrade and setup call
+        _setImplementation(newImplementation);
+        if (data.length > 0 || forceCall) {
+            Address.functionDelegateCall(newImplementation, data);
+        }
+
+        // Perform rollback test if not already in progress
+        StorageSlot.BooleanSlot storage rollbackTesting = StorageSlot.getBooleanSlot(_ROLLBACK_SLOT);
+        if (!rollbackTesting.value) {
+            // Trigger rollback using upgradeTo from the new implementation
+            rollbackTesting.value = true;
+            Address.functionDelegateCall(
+                newImplementation,
+                abi.encodeWithSignature("upgradeTo(address)", oldImplementation)
+            );
+            rollbackTesting.value = false;
+            // Check rollback was effective
+            require(oldImplementation == _getImplementation(), "ERC1967Upgrade: upgrade breaks further upgrades");
+            // Finally reset to the new implementation and log the upgrade
+            _upgradeTo(newImplementation);
         }
     }
 
@@ -488,6 +501,11 @@ abstract contract ERC1967Upgrade is IERC1967 {
      * validated in the constructor.
      */
     bytes32 internal constant _ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+
+    /**
+     * @dev Emitted when the admin account has changed.
+     */
+    event AdminChanged(address previousAdmin, address newAdmin);
 
     /**
      * @dev Returns the current admin.
@@ -519,6 +537,11 @@ abstract contract ERC1967Upgrade is IERC1967 {
      * This is bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)) and is validated in the constructor.
      */
     bytes32 internal constant _BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
+
+    /**
+     * @dev Emitted when the beacon is upgraded.
+     */
+    event BeaconUpgraded(address indexed beacon);
 
     /**
      * @dev Returns the current beacon.
@@ -556,90 +579,6 @@ abstract contract ERC1967Upgrade is IERC1967 {
             Address.functionDelegateCall(IBeacon(newBeacon).implementation(), data);
         }
     }
-}
-
-pragma solidity ^0.8.0;
-
-/**
- * @dev This abstract contract provides a fallback function that delegates all calls to another contract using the EVM
- * instruction `delegatecall`. We refer to the second contract as the _implementation_ behind the proxy, and it has to
- * be specified by overriding the virtual {_implementation} function.
- *
- * Additionally, delegation to the implementation can be triggered manually through the {_fallback} function, or to a
- * different contract through the {_delegate} function.
- *
- * The success and return data of the delegated call will be returned back to the caller of the proxy.
- */
-abstract contract Proxy {
-    /**
-     * @dev Delegates the current call to `implementation`.
-     *
-     * This function does not return to its internal call site, it will return directly to the external caller.
-     */
-    function _delegate(address implementation) internal virtual {
-        assembly {
-            // Copy msg.data. We take full control of memory in this inline assembly
-            // block because it will not return to Solidity code. We overwrite the
-            // Solidity scratch pad at memory position 0.
-            calldatacopy(0, 0, calldatasize())
-
-            // Call the implementation.
-            // out and outsize are 0 because we don't know the size yet.
-            let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
-
-            // Copy the returned data.
-            returndatacopy(0, 0, returndatasize())
-
-            switch result
-            // delegatecall returns 0 on error.
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
-        }
-    }
-
-    /**
-     * @dev This is a virtual function that should be overridden so it returns the address to which the fallback function
-     * and {_fallback} should delegate.
-     */
-    function _implementation() internal view virtual returns (address);
-
-    /**
-     * @dev Delegates the current call to the address returned by `_implementation()`.
-     *
-     * This function does not return to its internal call site, it will return directly to the external caller.
-     */
-    function _fallback() internal virtual {
-        _beforeFallback();
-        _delegate(_implementation());
-    }
-
-    /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
-     * function in the contract matches the call data.
-     */
-    fallback() external payable virtual {
-        _fallback();
-    }
-
-    /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
-     * is empty.
-     */
-    receive() external payable virtual {
-        _fallback();
-    }
-
-    /**
-     * @dev Hook that is called before falling back to the implementation. Can happen as part of a manual `_fallback`
-     * call, or as part of the Solidity `fallback` or `receive` functions.
-     *
-     * If overridden should call `super._beforeFallback()`.
-     */
-    function _beforeFallback() internal virtual {}
 }
 
 pragma solidity ^0.8.0;
