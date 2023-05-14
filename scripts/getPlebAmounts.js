@@ -23,9 +23,10 @@ const lpFarmAmounts = {}
 for (const i in farmAmounts) {
   lpFarmAmounts[i.toLowerCase()] = farmAmounts[i].plebAmount
 }
-const lockerAmounts = require('./plebLockerAmounts')
-for (const i in lockerAmounts) {
-  lockerAmounts[i.toLowerCase()] = lockerAmounts[i]
+const _lockerAmounts = require('./plebLockerAmounts')
+const lockerAmounts = {}
+for (const i in _lockerAmounts) {
+  lockerAmounts[i.toLowerCase()] = _lockerAmounts[i]
 }
 
 const getTotal = (amounts) => {
@@ -95,7 +96,7 @@ for (const address in amounts) {
   }
 }
 
-console.log(amounts)
+// console.log(amounts)
 
 const addresses = Object.keys(amounts).length
 console.log('total', format(total), 'recipients', `${addresses}/${addressesBefore}`)

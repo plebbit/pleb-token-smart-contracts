@@ -44,7 +44,7 @@ const getAmounts = async (addresses) => {
     "stateMutability":"view",
     "type":"function"
   }]
-  const contract = new ethers.Contract('0x7DB134260b0BE15d5C2Ec8d9246fD51765BF69fc', abi, provider)
+  const contract = new ethers.Contract('0x745fad4e2c8d07226ef8d6a8f3d78265a9a8eb45', abi, provider)
 
   for (const [i, address] of addresses.entries()) {
     const res1 = await contract.balanceOf('0', address)

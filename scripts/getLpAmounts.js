@@ -23,9 +23,10 @@ const lpFarmAmounts = {}
 for (const i in farmAmounts) {
   lpFarmAmounts[i.toLowerCase()] = farmAmounts[i].lpAmount
 }
-const lockerAmounts = require('./lpLockerAmounts')
-for (const i in lockerAmounts) {
-  lockerAmounts[i.toLowerCase()] = lockerAmounts[i]
+const _lockerAmounts = require('./lpLockerAmounts')
+const lockerAmounts = {}
+for (const i in _lockerAmounts) {
+  lockerAmounts[i.toLowerCase()] = _lockerAmounts[i]
 }
 
 const getTotal = (amounts) => {
