@@ -1,17 +1,17 @@
 require('util').inspect.defaultOptions.breakLength = 9999
 const {ethers} = require('ethers')
 const fs = require('fs')
-const eventsDatabasePath = __dirname + '/lockerEvents.json'
+const eventsDatabasePath = __dirname + '/lpLockerEvents.json'
 let eventsDatabase = {
-  '0x7DB134260b0BE15d5C2Ec8d9246fD51765BF69fc': {},
-  '0x745fad4e2c8d07226ef8d6a8f3d78265a9a8eb45': {}
+  '0x745fad4e2c8d07226ef8d6a8f3d78265a9a8eb45': {},
 }
 try {
    eventsDatabase = require(eventsDatabasePath)
 }
 catch (e) {} 
 const provider = new ethers.providers.JsonRpcProvider({url: 'https://api.avax.network/ext/bc/C/rpc'}, 43114)
-const hoursToGet = 24 * 10
+const startBlock = 13039217
+const endBlock = 14295083
 const maxBlocks = 2048
 
 const getTotalLocked = () => {
@@ -56,14 +56,14 @@ const getEvents = async (contractAddress) => {
     }]
   const contract = new ethers.Contract(contractAddress, abi, provider)
   const filter = contract.filters.Lock()
-  const currentBlock = await provider.getBlockNumber()
 
-  let currentHour = 0
-  while (currentHour < hoursToGet) {
-    const from = (currentHour + 1) * maxBlocks
-    const to = currentHour * maxBlocks
-    const fromBlock = currentBlock - from
-    const toBlock = currentBlock - to
+  let currentBlock = startBlock
+  while (currentBlock < endBlock) {
+    const previousCurrentBlock = currentBlock
+    currentBlock += maxBlocks
+
+    const fromBlock = previousCurrentBlock
+    const toBlock = currentBlock
     console.log({contractAddress, currentBlock, fromBlock, toBlock})
     const events = await contract.queryFilter(filter, fromBlock, toBlock)
     for (const event of events) {
@@ -77,7 +77,6 @@ const getEvents = async (contractAddress) => {
       console.log(eventParsed)
       fs.writeFileSync(eventsDatabasePath, JSON.stringify(eventsDatabase))
     }
-    currentHour++
   }
 }
 

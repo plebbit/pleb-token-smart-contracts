@@ -68,6 +68,16 @@ describe.only('Token', function () {
     expect((await tokenV1.balanceOf(user2.address)).toString()).to.equal(amount2)
     expect((await tokenV1.balanceOf(user3.address)).toString()).to.equal(amount3)
 
+    const amounts = []
+    const addresses = []
+    while (addresses.length < 100) {
+      let address = '000000000000000000000000000000000000000' + (addresses.length + 1)
+      address = '0x' + address.slice(-40)
+      addresses.push(address)
+      amounts.push(('1 000 000 000' + zeros).replaceAll(' ', ''))
+    }
+    console.log((await tokenV1.estimateGas.migrate(addresses, amounts)).toString())
+
     // try to transfer
     await expectRevert(
       tokenV1.connect(user1).transfer(user2.address, '1'),

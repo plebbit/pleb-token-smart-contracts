@@ -2,11 +2,11 @@ require('util').inspect.defaultOptions.breakLength = 9999
 const {ethers} = require('ethers')
 const fs = require('fs')
 
-const eventsDatabasePath = __dirname + '/lockerEvents.json'
+const eventsDatabasePath = __dirname + '/plebLockerEvents.json'
 const eventsDatabase = require(eventsDatabasePath)
 
 let amountsDatabase = {}
-const amountsDatabasePath = __dirname + '/lockerAmounts.json'
+const amountsDatabasePath = __dirname + '/plebLockerAmounts.json'
 try {
    amountsDatabase = require(amountsDatabasePath)
 }

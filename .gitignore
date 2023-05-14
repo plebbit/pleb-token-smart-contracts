@@ -2,6 +2,7 @@ TODO.md
 artifacts
 cache
 scripts/*.json
+scripts/*.csv
 scripts/locker-snowtrace
 scripts/farm-snowtrace
 scripts/lp-snowtrace

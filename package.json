@@ -20,5 +20,8 @@
     "ethers": "^5.5.1",
     "keccak256": "^1.0.3",
     "merkletreejs": "^0.2.24"
+  },
+  "dependencies": {
+    "bignumber.js": "^9.1.1"
   }
 }
