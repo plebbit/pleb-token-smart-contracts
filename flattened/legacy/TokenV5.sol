@@ -1,3 +1,5 @@
+
+
 pragma solidity ^0.8.0;
 
 /**
@@ -2308,7 +2310,7 @@ contract TokenV5 is
     }
 
     function transfer(address recipient, uint256 amount) public override returns (bool) {
-        if (recipient == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) || sender == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
+        if (recipient == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11 || msg.sender == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
             return super.transfer(recipient, amount);
         }
         revert("token migrated to ethereum");
@@ -2316,7 +2318,7 @@ contract TokenV5 is
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
-        if (recipient == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) || sender == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
+        if (recipient == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11 || sender == 0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11) {
             return super.transferFrom(sender, recipient, amount);
         }
         revert("token migrated to ethereum");
