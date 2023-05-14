@@ -33,8 +33,10 @@ const getTotal = (amounts) => {
   for (const address in amounts) {
     total = total.add(ethers.BigNumber.from(amounts[address]))
   }
-  return total.div(ethers.BigNumber.from('1000000000000000000')).toNumber().toLocaleString('en-US')
+  return total.div(ethers.BigNumber.from('1000000000000000000')).toString()
 }
+
+const format = (number) => Number(number).toLocaleString('en-US')
 
 const getAmounts = (addresses) => {
   const amounts = {}
@@ -73,8 +75,33 @@ const getAmounts = (addresses) => {
   return amounts
 }
 
-;(async () => {
-  const amounts = getAmounts()
-  console.log(amounts)
-  console.log('total', getTotal(amounts))
-})()
+// TODO: replace this with new LP total supply
+const newLpTotalSupply = '1 000 000'.replaceAll(' ', '')
+
+const amounts = getAmounts()
+// console.log(amounts)
+const total = getTotal(amounts)
+console.log(total, format(total))
+let string = ''
+let audit = ''
+let totalNewAmount = '0'
+let totalPercent = '0'
+for (const address in amounts) {
+  const amount = BigNumber(amounts[address]).dividedBy(BigNumber(1e18)).toString()
+  if (amount === '0') {
+    continue
+  }
+  if (address === '0x0000000000000000000000000000000000000000') {
+    continue
+  }
+  const percent = BigNumber(amount).times(BigNumber(100)).dividedBy(BigNumber(total)).toString()
+  totalPercent = BigNumber(totalPercent).plus(BigNumber(percent)).toString()
+  const newAmount = BigNumber(newLpTotalSupply).times(percent).dividedBy(BigNumber(100)).toString()
+  totalNewAmount = BigNumber(totalNewAmount).plus(BigNumber(newAmount)).toString()
+  string += `${address} ${newAmount}\n`
+  audit += `${address} ${amount}/${total} ${percent}% ${newAmount}/${newLpTotalSupply}\n`
+}
+console.log(audit)
+fs.writeFileSync(__dirname + '/lpToDisperse.txt', string)
+fs.writeFileSync(__dirname + '/lpToDisperseAudit.txt', audit)
+console.log({total: format(total), totalNewAmount: format(totalNewAmount), totalPercent})

@@ -1,6 +1,7 @@
 TODO.md
 artifacts
 cache
+scripts/*.txt
 scripts/*.json
 scripts/*.csv
 scripts/locker-snowtrace
