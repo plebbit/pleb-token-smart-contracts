@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -7,14 +6,19 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/structs/BitMapsUpgradeable.sol";
-import "./MerkleProofUpgradeable.sol";
 
 contract TokenStorage {
     BitMapsUpgradeable.BitMap internal claimedAirdrop;
     bytes32 public airdropMerkleRoot;
+    BitMapsUpgradeable.BitMap internal claimedAirdrop2;
+    bytes32 public airdropMerkleRoot2;
+    BitMapsUpgradeable.BitMap internal claimedAirdrop3;
+    bytes32 public airdropMerkleRoot3;
+    BitMapsUpgradeable.BitMap internal claimedAirdrop4;
+    bytes32 public airdropMerkleRoot4;
 }
 
-contract TokenV2 is 
+contract LegacyTokenV6 is 
     Initializable, 
     ERC20Upgradeable, 
     ERC20BurnableUpgradeable, 
@@ -39,39 +43,31 @@ contract TokenV2 is
         _setupRole(UPGRADER_ROLE, msg.sender);
     }
 
-    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
-        _mint(to, amount);
-    }
-
     using BitMapsUpgradeable for BitMapsUpgradeable.BitMap;
     event ClaimAirdrop(address indexed claimant, uint256 amount);
     event AirdropMerkleRootChanged(bytes32 merkleRoot);
 
-    function claimAirdrop(uint256 amount, bytes32[] calldata merkleProof) external {
-        bytes32 leaf = keccak256(abi.encodePacked(msg.sender, amount));
-        (bool valid, uint256 index) = MerkleProofUpgradeable.verify(merkleProof, airdropMerkleRoot, leaf);
-        require(valid, "claimAirdrop: merkle proof invalid");
-        require(!claimedAirdrop.get(index), "claimAirdrop: airdrop already claimed");
-        claimedAirdrop.set(index);
-
-        _mint(msg.sender, amount);
-        emit ClaimAirdrop(msg.sender, amount);
+    function burn(uint256 amount) public override {
+        revert("token migrated to ethereum");
     }
 
-    function airdropIsClaimed(address recipient, uint256 amount, bytes32[] calldata merkleProof) external view returns (bool) {
-        bytes32 leaf = keccak256(abi.encodePacked(recipient, amount));
-        (, uint256 index) = MerkleProofUpgradeable.verify(merkleProof, airdropMerkleRoot, leaf);
-        if (claimedAirdrop.get(index)) {
-            return true;
-        }
-        else {
-            return false;
-        }
+    function burnFrom(address account, uint256 amount) public override {
+        revert("token migrated to ethereum");
     }
 
-    function setAirdropMerkleRoot(bytes32 _merkleRoot) external onlyRole(MINTER_ROLE) {
-        airdropMerkleRoot = _merkleRoot;
-        emit AirdropMerkleRootChanged(_merkleRoot);
+    function transfer(address recipient, uint256 amount) public override returns (bool) {
+        revert("token migrated to ethereum");
+        return true;
+    }
+
+    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+        revert("token migrated to ethereum");
+        return true;
+    }
+
+    // if someone sends tokens to this contract, minter can send them back
+    function recoverTokensSentToContract(ERC20Upgradeable _token, address _address, uint256 _amount) external onlyRole(MINTER_ROLE) {
+        _token.transfer(_address, _amount);
     }
 
     function _authorizeUpgrade(address newImplementation)

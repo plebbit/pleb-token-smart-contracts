@@ -18,7 +18,7 @@ contract TokenStorage {
     bytes32 public airdropMerkleRoot4;
 }
 
-contract TokenV5 is 
+contract LegacyTokenV5 is 
     Initializable, 
     ERC20Upgradeable, 
     ERC20BurnableUpgradeable, 

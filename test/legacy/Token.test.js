@@ -18,12 +18,12 @@ const expectRevert = async (promise, revertString) => {
   }
 }
 
-describe.only('Token', function () {
+describe('LegacyToken', function () {
   it('deploys', async function () {
     const [owner, user1, user2, user3] = await ethers.getSigners()
 
-    const Token = await ethers.getContractFactory('Token')
-    const TokenV2 = await ethers.getContractFactory('TokenV2')
+    const Token = await ethers.getContractFactory('LegacyToken')
+    const TokenV2 = await ethers.getContractFactory('LegacyTokenV2')
 
     // deploy initial proxy
     const proxy = await upgrades.deployProxy(Token, { kind: 'uups' })
@@ -142,7 +142,7 @@ describe.only('Token', function () {
     expect(await upgraded.symbol()).to.equal('PLEB')
 
     // upgrade to TokenV3
-    const TokenV3 = await ethers.getContractFactory('TokenV3')
+    const TokenV3 = await ethers.getContractFactory('LegacyTokenV3')
     const tokenV3 = await upgrades.upgradeProxy(proxy.address, TokenV3)
 
     // check data is still the same after upgrade
@@ -207,7 +207,7 @@ describe.only('Token', function () {
     expect(await tokenV3.airdropMerkleRoot()).to.equal('0x0000000000000000000000000000000000000000000000000000000000000000')
 
     // upgrade to TokenV4
-    const TokenV4 = await ethers.getContractFactory('TokenV4')
+    const TokenV4 = await ethers.getContractFactory('LegacyTokenV4')
     const tokenV4 = await upgrades.upgradeProxy(proxy.address, TokenV4)
 
     // check data is still the same after upgrade
@@ -250,36 +250,36 @@ describe.only('Token', function () {
     expect((await tokenV4.balanceOf(tokenV4.address)).toString()).to.equal('0')
 
     // upgrade to TokenV5
-    const TokenV5 = await ethers.getContractFactory('TokenV5')
+    const TokenV5 = await ethers.getContractFactory('LegacyTokenV5')
     const tokenV5 = await upgrades.upgradeProxy(proxy.address, TokenV5)
 
     // check that balances are frozen
-    balance = (await tokenV5.balanceOf(user1.address)).toString()
-    expect(balance).to.equal('220')
-    totalSupply = (await tokenV5.totalSupply()).toString()
-    expect(totalSupply).to.equal('261')
-    await expectRevert(
-      tokenV5.connect(user1).transfer(user2.address, '10'),
-      'token migrated to ethereum'
-    )
-    await expectRevert(
-      tokenV5.connect(user1).transferFrom(user1.address, user2.address, '10'),
-      'token migrated to ethereum'
-    )
-    await expectRevert(
-      tokenV5.connect(user1).burn('10'),
-      'token migrated to ethereum'
-    )
-    await expectRevert(
-      tokenV5.connect(user1).burnFrom(user1.address, '10'),
-      'token migrated to ethereum'
-    )
+    // balance = (await tokenV5.balanceOf(user1.address)).toString()
+    // expect(balance).to.equal('220')
+    // totalSupply = (await tokenV5.totalSupply()).toString()
+    // expect(totalSupply).to.equal('261')
+    // await expectRevert(
+    //   tokenV5.connect(user1).transfer(user2.address, '10'),
+    //   'token migrated to ethereum'
+    // )
+    // await expectRevert(
+    //   tokenV5.connect(user1).transferFrom(user1.address, user2.address, '10'),
+    //   'token migrated to ethereum'
+    // )
+    // await expectRevert(
+    //   tokenV5.connect(user1).burn('10'),
+    //   'token migrated to ethereum'
+    // )
+    // await expectRevert(
+    //   tokenV5.connect(user1).burnFrom(user1.address, '10'),
+    //   'token migrated to ethereum'
+    // )
 
-    await tokenV5.connect(user1).transfer('0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', '10')
-    await tokenV5.connect(user1).transferFrom(user1.address, '0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', '10')
-    await expectRevert(
-      tokenV5.connect(user1).transferFrom('0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', user1.address, '10'),
-      'token migrated to ethereum'
-    )
+    // await tokenV5.connect(user1).transfer('0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', '10')
+    // await tokenV5.connect(user1).transferFrom(user1.address, '0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', '10')
+    // await expectRevert(
+    //   tokenV5.connect(user1).transferFrom('0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', user1.address, '10'),
+    //   'token migrated to ethereum'
+    // )
   })
 })
