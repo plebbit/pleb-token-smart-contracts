@@ -18,7 +18,7 @@ const expectRevert = async (promise, revertString) => {
   }
 }
 
-describe.only('Token', function () {
+describe('Token', function () {
   it('deploys', async function () {
     const [owner, user1, user2, user3] = await ethers.getSigners()
 

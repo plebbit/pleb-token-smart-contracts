@@ -1,10 +1,49 @@
 /**
- *Submitted for verification at Etherscan.io on 2021-11-05
+ *Submitted for verification at snowtrace.io on 2021-11-05
 */
+
+// File: contracts/traderjoe/interfaces/IJoeFactory.sol
+
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity >=0.5.0;
+
+interface IJoeFactory {
+    event PairCreated(
+        address indexed token0,
+        address indexed token1,
+        address pair,
+        uint256
+    );
+
+    function feeTo() external view returns (address);
+
+    function feeToSetter() external view returns (address);
+
+    function migrator() external view returns (address);
+
+    function getPair(address tokenA, address tokenB)
+        external
+        view
+        returns (address pair);
+
+    function allPairs(uint256) external view returns (address pair);
+
+    function allPairsLength() external view returns (uint256);
+
+    function createPair(address tokenA, address tokenB)
+        external
+        returns (address pair);
+
+    function setFeeTo(address) external;
+
+    function setFeeToSetter(address) external;
+
+    function setMigrator(address) external;
+}
 
 // File: contracts/traderjoe/libraries/SafeMath.sol
 
-// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity =0.6.12;
 
@@ -26,7 +65,9 @@ library SafeMathJoe {
 
 // File: contracts/traderjoe/JoeERC20.sol
 
+
 pragma solidity =0.6.12;
+
 
 contract JoeERC20 {
     using SafeMathJoe for uint256;
@@ -161,6 +202,7 @@ contract JoeERC20 {
 
 // File: contracts/traderjoe/libraries/Math.sol
 
+
 pragma solidity =0.6.12;
 
 // a library for performing various math operations
@@ -187,6 +229,7 @@ library Math {
 
 // File: contracts/traderjoe/libraries/UQ112x112.sol
 
+
 pragma solidity =0.6.12;
 
 // a library for handling binary fixed point numbers (https://en.wikipedia.org/wiki/Q_(number_format))
@@ -209,6 +252,7 @@ library UQ112x112 {
 }
 
 // File: contracts/traderjoe/interfaces/IERC20.sol
+
 
 pragma solidity >=0.5.0;
 
@@ -246,45 +290,8 @@ interface IERC20Joe {
     ) external returns (bool);
 }
 
-// File: contracts/traderjoe/interfaces/IJoeFactory.sol
-
-pragma solidity >=0.5.0;
-
-interface IJoeFactory {
-    event PairCreated(
-        address indexed token0,
-        address indexed token1,
-        address pair,
-        uint256
-    );
-
-    function feeTo() external view returns (address);
-
-    function feeToSetter() external view returns (address);
-
-    function migrator() external view returns (address);
-
-    function getPair(address tokenA, address tokenB)
-        external
-        view
-        returns (address pair);
-
-    function allPairs(uint256) external view returns (address pair);
-
-    function allPairsLength() external view returns (uint256);
-
-    function createPair(address tokenA, address tokenB)
-        external
-        returns (address pair);
-
-    function setFeeTo(address) external;
-
-    function setFeeToSetter(address) external;
-
-    function setMigrator(address) external;
-}
-
 // File: contracts/traderjoe/interfaces/IJoeCallee.sol
+
 
 pragma solidity >=0.5.0;
 
@@ -299,7 +306,14 @@ interface IJoeCallee {
 
 // File: contracts/traderjoe/JoePair.sol
 
+
 pragma solidity =0.6.12;
+
+
+
+
+
+
 
 interface IMigrator {
     // Return the desired amount of liquidity token that the migrator wants.
@@ -598,5 +612,78 @@ contract JoePair is JoeERC20 {
             reserve0,
             reserve1
         );
+    }
+}
+
+// File: contracts/traderjoe/JoeFactory.sol
+
+
+pragma solidity =0.6.12;
+
+
+
+contract JoeFactory is IJoeFactory {
+    address public override feeTo;
+    address public override feeToSetter;
+    address public override migrator;
+
+    mapping(address => mapping(address => address)) public override getPair;
+    address[] public override allPairs;
+
+    event PairCreated(
+        address indexed token0,
+        address indexed token1,
+        address pair,
+        uint256
+    );
+
+    constructor(address _feeToSetter) public {
+        feeToSetter = _feeToSetter;
+    }
+
+    function allPairsLength() external view override returns (uint256) {
+        return allPairs.length;
+    }
+
+    function pairCodeHash() external pure returns (bytes32) {
+        return keccak256(type(JoePair).creationCode);
+    }
+
+    function createPair(address tokenA, address tokenB)
+        external
+        override
+        returns (address pair)
+    {
+        require(tokenA != tokenB, "Joe: IDENTICAL_ADDRESSES");
+        (address token0, address token1) = tokenA < tokenB
+            ? (tokenA, tokenB)
+            : (tokenB, tokenA);
+        require(token0 != address(0), "Joe: ZERO_ADDRESS");
+        require(getPair[token0][token1] == address(0), "Joe: PAIR_EXISTS"); // single check is sufficient
+        bytes memory bytecode = type(JoePair).creationCode;
+        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+        assembly {
+            pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
+        }
+        JoePair(pair).initialize(token0, token1);
+        getPair[token0][token1] = pair;
+        getPair[token1][token0] = pair; // populate mapping in the reverse direction
+        allPairs.push(pair);
+        emit PairCreated(token0, token1, pair, allPairs.length);
+    }
+
+    function setFeeTo(address _feeTo) external override {
+        require(msg.sender == feeToSetter, "Joe: FORBIDDEN");
+        feeTo = _feeTo;
+    }
+
+    function setMigrator(address _migrator) external override {
+        require(msg.sender == feeToSetter, "Joe: FORBIDDEN");
+        migrator = _migrator;
+    }
+
+    function setFeeToSetter(address _feeToSetter) external override {
+        require(msg.sender == feeToSetter, "Joe: FORBIDDEN");
+        feeToSetter = _feeToSetter;
     }
 }

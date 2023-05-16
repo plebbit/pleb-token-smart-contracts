@@ -18,7 +18,7 @@ const expectRevert = async (promise, revertString) => {
   }
 }
 
-describe('LegacyToken', function () {
+describe.only('LegacyToken', function () {
   it('deploys', async function () {
     const [owner, user1, user2, user3] = await ethers.getSigners()
 
@@ -249,37 +249,80 @@ describe('LegacyToken', function () {
     expect((await tokenV4.balanceOf(user2.address)).toString()).to.equal('30')
     expect((await tokenV4.balanceOf(tokenV4.address)).toString()).to.equal('0')
 
+    // set up lp
+    const zeros = '000000000000000000'
+    const wavax = await upgrades.deployProxy(TokenV4, { kind: 'uups' })
+    await wavax.deployed()
+    await wavax.grantRole(MINTER_ROLE, owner.address)
+    await wavax.mint(owner.address, '2000' + zeros)
+    const unknownAddress = '0x0000000000000000000000000000000000000001'
+    const Factory = await ethers.getContractFactory('JoeFactory')
+    const factory = await Factory.deploy(owner.address)
+    await factory.setFeeTo(unknownAddress)
+    const joePairAddress = (await factory.createPair(tokenV4.address, wavax.address).then(res => res.wait())).events[0].args.pair
+    const Router = await ethers.getContractFactory('JoeRouter02')
+    const router = await Router.deploy(factory.address, unknownAddress)
+
+    // add liquidity
+    const fiftyB = ('50 000 000 000' + zeros).replaceAll(' ', '')
+    await tokenV4.mint(owner.address, fiftyB)
+    await tokenV4.approve(router.address, fiftyB)
+    await wavax.approve(router.address, '2000' + zeros)
+    await router.addLiquidity(
+      tokenV4.address, 
+      wavax.address, 
+      fiftyB, 
+      '2000' + zeros, 
+      fiftyB, 
+      '2000' + zeros, 
+      unknownAddress,
+      '1642183140580'
+    )
+    const JoePair = await ethers.getContractFactory('contracts/legacy/test/JoePair.sol:JoePair')
+    const joePair = await JoePair.attach(joePairAddress)
+    console.log((await joePair.balanceOf(unknownAddress)) / 1e18)
+    console.log((await joePair.totalSupply()) / 1e18)
+
     // upgrade to TokenV5
     const TokenV5 = await ethers.getContractFactory('LegacyTokenV5')
     const tokenV5 = await upgrades.upgradeProxy(proxy.address, TokenV5)
 
-    // check that balances are frozen
-    // balance = (await tokenV5.balanceOf(user1.address)).toString()
-    // expect(balance).to.equal('220')
-    // totalSupply = (await tokenV5.totalSupply()).toString()
-    // expect(totalSupply).to.equal('261')
-    // await expectRevert(
-    //   tokenV5.connect(user1).transfer(user2.address, '10'),
-    //   'token migrated to ethereum'
-    // )
-    // await expectRevert(
-    //   tokenV5.connect(user1).transferFrom(user1.address, user2.address, '10'),
-    //   'token migrated to ethereum'
-    // )
-    // await expectRevert(
-    //   tokenV5.connect(user1).burn('10'),
-    //   'token migrated to ethereum'
-    // )
-    // await expectRevert(
-    //   tokenV5.connect(user1).burnFrom(user1.address, '10'),
-    //   'token migrated to ethereum'
-    // )
+    // upgrade to TokenV6
+    const TokenV6 = await ethers.getContractFactory('TokenV6')
+    const tokenV6 = await upgrades.upgradeProxy(proxy.address, TokenV6)
 
-    // await tokenV5.connect(user1).transfer('0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', '10')
-    // await tokenV5.connect(user1).transferFrom(user1.address, '0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', '10')
-    // await expectRevert(
-    //   tokenV5.connect(user1).transferFrom('0x3d0e5A9453BA51516eF688FB82d9F5f601FF6C11', user1.address, '10'),
-    //   'token migrated to ethereum'
-    // )
+    // migrate liquidity
+    console.log('before migrate')
+    console.log('token address', wavax.address)
+    console.log('owner wavax balance', (await wavax.balanceOf(owner.address)).toString() / 1e18)
+    console.log('owner token balance', (await tokenV6.balanceOf(owner.address)).toString() / 1e18)
+    console.log('pair token balance', (await tokenV6.balanceOf(joePair.address)).toString() / 1e18)
+    await tokenV6.migrateLpToEthereum(router.address, joePair.address, tokenV6.address, wavax.address)
+    console.log('after migrate')
+    console.log('owner wavax balance', (await wavax.balanceOf(owner.address)).toString() / 1e18)
+    console.log('owner token balance', (await tokenV6.balanceOf(owner.address)).toString() / 1e18)
+    console.log('pair token balance', (await tokenV6.balanceOf(joePair.address)).toString() / 1e18)
+ 
+    // transfers are frozen
+    await expectRevert(
+      router.swapExactTokensForTokens(1, 0, [tokenV6.address, wavax.address], owner.address, Date.now() + 60000 ),
+      'TransferHelper: TRANSFER_FROM_FAILED'
+    )
+    await expectRevert(
+      tokenV5.connect(user1).transfer(user2.address, '10'),
+      'token migrated to ethereum'
+    )
+    await expectRevert(
+      tokenV5.connect(user1).transferFrom(user1.address, user2.address, '10'),
+      'token migrated to ethereum'
+    )
+    await expectRevert(
+      tokenV5.connect(user1).burn('10'),
+      'token migrated to ethereum'
+    )
+    await expectRevert(
+      tokenV5.connect(user1).burnFrom(user1.address, '10'),
+      'token migrated to ethereum'
+    )
   })
 })

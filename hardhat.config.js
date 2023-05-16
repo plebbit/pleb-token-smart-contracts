@@ -3,5 +3,20 @@ require('@openzeppelin/hardhat-upgrades');
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.11",
-};
+  solidity: {
+    compilers: [
+      // main version used for contracts
+      {version: "0.8.11",},
+      // versions needed for test contracts
+      {
+        version: "0.6.12",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
+  },
+}
