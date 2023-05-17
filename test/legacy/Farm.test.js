@@ -58,7 +58,7 @@ const deployLps = async () => {
   return [lp, lp2]
 }
 
-describe('Farm', () => {
+describe.skip('Farm', () => {
   it('test token', async () => {
     const [owner, user1] = await ethers.getSigners()
     const Token = await ethers.getContractFactory('TestToken')

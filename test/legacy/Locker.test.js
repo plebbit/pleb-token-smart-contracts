@@ -36,7 +36,7 @@ const deployToken = async () => {
   return token
 }
 
-describe('Locker', () => {
+describe.skip('Locker', () => {
   it('setters and getters', async () => {
     const [owner, user1] = await ethers.getSigners()
     const token = await deployToken()

@@ -18,7 +18,7 @@ const expectRevert = async (promise, revertString) => {
   }
 }
 
-describe.only('LegacyToken', function () {
+describe('LegacyToken', function () {
   it('deploys', async function () {
     const [owner, user1, user2, user3] = await ethers.getSigners()
 
@@ -296,11 +296,13 @@ describe.only('LegacyToken', function () {
     console.log('token address', wavax.address)
     console.log('owner wavax balance', (await wavax.balanceOf(owner.address)).toString() / 1e18)
     console.log('owner token balance', (await tokenV6.balanceOf(owner.address)).toString() / 1e18)
+    console.log('pair wavax balance', (await wavax.balanceOf(joePair.address)).toString() / 1e18)
     console.log('pair token balance', (await tokenV6.balanceOf(joePair.address)).toString() / 1e18)
     await tokenV6.migrateLpToEthereum(router.address, joePair.address, tokenV6.address, wavax.address)
     console.log('after migrate')
     console.log('owner wavax balance', (await wavax.balanceOf(owner.address)).toString() / 1e18)
     console.log('owner token balance', (await tokenV6.balanceOf(owner.address)).toString() / 1e18)
+    console.log('pair wavax balance', (await wavax.balanceOf(joePair.address)).toString() / 1e18)
     console.log('pair token balance', (await tokenV6.balanceOf(joePair.address)).toString() / 1e18)
  
     // transfers are frozen
