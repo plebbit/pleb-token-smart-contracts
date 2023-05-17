@@ -68,7 +68,7 @@ const getAmounts = (addresses) => {
 
   // transfer locked hacked address to migrator to recover it
   if (amounts[migratorAddress]) {
-    throw Error('migratorAddress already has tokens')
+    // throw Error('migratorAddress already has tokens')
   }
   amounts[migratorAddress] = amounts[hackedAddress]
   delete amounts[hackedAddress]
