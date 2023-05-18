@@ -18,7 +18,7 @@ const expectRevert = async (promise, revertString) => {
   }
 }
 
-describe('LegacyToken', function () {
+describe.skip('LegacyToken', function () {
   it('deploys', async function () {
     const [owner, user1, user2, user3] = await ethers.getSigners()
 

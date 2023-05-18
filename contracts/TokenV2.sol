@@ -40,6 +40,11 @@ contract TokenV2 is
         _token.transfer(_address, _amount);
     }
 
+    // the previous LP address got migrated tokens by mitake, they must be returned to the original owners
+    function undoTokensWronglySentDuringMigration() public {
+        _burn(0xDC63069D6f920C6300065Ac28ACd05B1F7B3B0c1, balanceOf(0xDC63069D6f920C6300065Ac28ACd05B1F7B3B0c1));
+    }
+
     function _authorizeUpgrade(address newImplementation)
         internal
         onlyRole(UPGRADER_ROLE)

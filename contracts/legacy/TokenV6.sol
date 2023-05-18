@@ -20,7 +20,7 @@ contract TokenStorage {
     bool internal migratingLp;
 }
 
-contract TokenV6 is 
+contract LegacyTokenV6 is 
     Initializable, 
     ERC20Upgradeable, 
     ERC20BurnableUpgradeable, 

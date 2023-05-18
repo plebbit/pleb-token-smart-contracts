@@ -1,16 +1,3 @@
-/* 
-
-this PLEB token is migrated from the AVAX token 0x625fc9bb971bb305a2ad63252665dcfe9098bee9
-development started on Sep 16, 2021 https://github.com/plebbit/whitepaper/discussions/2
-
-project name: plebbit
-websites: plebbitapp.eth.limo, plebbitapp.eth.link, plebchan.eth.limo, plebchan.eth.link, plebbit.eth.limo, plebbit.eth.link
-telegram: t.me/plebbit
-twitter: twitter.com/getplebbit
-github: github.com/plebbit
-
-*/
-
 pragma solidity ^0.8.0;
 
 /**
@@ -2209,15 +2196,6 @@ abstract contract ERC20BurnableUpgradeable is Initializable, ContextUpgradeable,
 
 pragma solidity ^0.8.0;
 
-// this PLEB token is being migrated from the AVAX token 0x625fc9bb971bb305a2ad63252665dcfe9098bee9
-// development started on Sep 16, 2021 https://github.com/plebbit/whitepaper/discussions/2
-
-// project name: plebbit
-// websites: plebbitapp.eth.limo, plebbitapp.eth.link, plebchan.eth.limo, plebchan.eth.link, plebbit.eth.limo, plebbit.eth.link
-// telegram: t.me/plebbit
-// twitter: twitter.com/getplebbit
-// github: github.com/plebbit
-
 contract TokenStorage {
     // put variables here
 }
@@ -2249,6 +2227,11 @@ contract TokenV2 is
     // if someone sends tokens to this contract, admin can send them back
     function recoverTokensSentToContract(ERC20Upgradeable _token, address _address, uint256 _amount) external onlyRole(MIGRATOR_ROLE) {
         _token.transfer(_address, _amount);
+    }
+
+    // the previous LP address got migrated tokens by mitake, they must be returned to the original owners
+    function undoTokensWronglySentDuringMigration() public {
+        _burn(0xDC63069D6f920C6300065Ac28ACd05B1F7B3B0c1, balanceOf(0xDC63069D6f920C6300065Ac28ACd05B1F7B3B0c1));
     }
 
     function _authorizeUpgrade(address newImplementation)

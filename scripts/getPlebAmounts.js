@@ -113,6 +113,7 @@ for (const address in amounts) {
     transactionAmounts = []
   }
 }
+transactions.push(`[${transactionAddresses.join(',')}],[${transactionAmounts.join(',')}]`)
 
 console.log('transactions', transactions.length)
 

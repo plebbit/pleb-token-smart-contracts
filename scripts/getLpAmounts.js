@@ -77,7 +77,7 @@ const getAmounts = (addresses) => {
 }
 
 // TODO: replace this with new LP total supply
-const newLpTotalSupply = '1 000 000'.replaceAll(' ', '')
+const newLpTotalSupply = '893079'.replaceAll(' ', '')
 
 const amounts = getAmounts()
 // console.log(amounts)
@@ -97,7 +97,7 @@ for (const address in amounts) {
   }
   const percent = BigNumber(amount).times(BigNumber(100)).dividedBy(BigNumber(total)).toString()
   totalPercent = BigNumber(totalPercent).plus(BigNumber(percent)).toString()
-  const newAmount = BigNumber(newLpTotalSupply).times(percent).dividedBy(BigNumber(100)).toString()
+  const newAmount = BigNumber(newLpTotalSupply).times(percent).dividedBy(BigNumber(100)).toFixed(10)
   totalNewAmount = BigNumber(totalNewAmount).plus(BigNumber(newAmount)).toString()
   string += `${address} ${newAmount}\n`
   audit += `${address} ${amount}/${total} ${percent}% ${newAmount}/${newLpTotalSupply}\n`
