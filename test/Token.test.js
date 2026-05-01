@@ -41,9 +41,9 @@ describe('Token', function () {
     console.log({MIGRATOR_ROLE})
     await tokenV1.grantRole(MIGRATOR_ROLE, owner.address)
 
-    // 1 trillion
+    // 1.5 trillion
     const zeros = '000000000000000000'
-    const totalSupply = ('1 000 000 000 000' + zeros).replaceAll(' ', '')
+    const totalSupply = ('1494065210287' + zeros).replaceAll(' ', '')
 
     // mint 1
     await tokenV1.mint(owner.address, totalSupply)
@@ -110,39 +110,39 @@ describe('Token', function () {
     // await uniswapV2Pair.transfer(user1.address, '1' + zeros)
 
     // set up lp
-    const LegacyTokenV4 = await ethers.getContractFactory('LegacyTokenV4')
-    const weth = await upgrades.deployProxy(LegacyTokenV4, { kind: 'uups' })
-    await weth.deployed()
-    const MINTER_ROLE = '0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6'
-    await weth.grantRole(MINTER_ROLE, owner.address)
-    await weth.mint(owner.address, '15' + zeros)
-    const unknownAddress = '0x0000000000000000000000000000000000000001'
-    const Factory = await ethers.getContractFactory('UniswapV2Factory')
-    const factory = await Factory.deploy(owner.address)
-    await factory.setFeeTo(unknownAddress)
-    const joePairAddress = (await factory.createPair(tokenV1.address, weth.address).then(res => res.wait())).events[0].args.pair
-    const Router = await ethers.getContractFactory('UniswapV2Router02')
-    const router = await Router.deploy(factory.address, unknownAddress)
+    // const LegacyTokenV4 = await ethers.getContractFactory('LegacyTokenV4')
+    // const weth = await upgrades.deployProxy(LegacyTokenV4, { kind: 'uups' })
+    // await weth.deployed()
+    // const MINTER_ROLE = '0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6'
+    // await weth.grantRole(MINTER_ROLE, owner.address)
+    // await weth.mint(owner.address, '15' + zeros)
+    // const unknownAddress = '0x0000000000000000000000000000000000000001'
+    // const Factory = await ethers.getContractFactory('UniswapV2Factory')
+    // const factory = await Factory.deploy(owner.address)
+    // await factory.setFeeTo(unknownAddress)
+    // const joePairAddress = (await factory.createPair(tokenV1.address, weth.address).then(res => res.wait())).events[0].args.pair
+    // const Router = await ethers.getContractFactory('UniswapV2Router02')
+    // const router = await Router.deploy(factory.address, unknownAddress)
 
     // add liquidity
-    const fiftyB = ('50 000 000 000' + zeros).replaceAll(' ', '')
-    await tokenV1.mint(owner.address, fiftyB)
-    await tokenV1.approve(router.address, fiftyB)
-    await weth.approve(router.address, '15' + zeros)
-    await router.addLiquidity(
-      tokenV1.address, 
-      weth.address, 
-      fiftyB, 
-      '15' + zeros, 
-      fiftyB, 
-      '15' + zeros, 
-      unknownAddress,
-      '1642183140580'
-    )
-    const JoePair = await ethers.getContractFactory('contracts/legacy/test/JoePair.sol:JoePair')
-    const joePair = await JoePair.attach(joePairAddress)
-    console.log((await joePair.balanceOf(unknownAddress)) / 1e18)
-    console.log((await joePair.totalSupply()) / 1e18)
+    // const fiftyB = ('50 000 000 000' + zeros).replaceAll(' ', '')
+    // await tokenV1.mint(owner.address, fiftyB)
+    // await tokenV1.approve(router.address, fiftyB)
+    // await weth.approve(router.address, '15' + zeros)
+    // await router.addLiquidity(
+    //   tokenV1.address, 
+    //   weth.address, 
+    //   fiftyB, 
+    //   '15' + zeros, 
+    //   fiftyB, 
+    //   '15' + zeros, 
+    //   unknownAddress,
+    //   '1642183140580'
+    // )
+    // const JoePair = await ethers.getContractFactory('contracts/legacy/test/JoePair.sol:JoePair')
+    // const joePair = await JoePair.attach(joePairAddress)
+    // console.log((await joePair.balanceOf(unknownAddress)) / 1e18)
+    // console.log((await joePair.totalSupply()) / 1e18)
 
     // tokens wrongly sent during migration
     await tokenV1.mint('0xDC63069D6f920C6300065Ac28ACd05B1F7B3B0c1', '1000')
@@ -165,5 +165,51 @@ describe('Token', function () {
     expect((await tokenV2.balanceOf('0xDC63069D6f920C6300065Ac28ACd05B1F7B3B0c1')).toString()).to.equal('1000')
     await tokenV2.undoTokensWronglySentDuringMigration()
     expect((await tokenV2.balanceOf('0xDC63069D6f920C6300065Ac28ACd05B1F7B3B0c1')).toString()).to.equal('0')
+   
+    // upgrade token
+    const TokenV3 = await ethers.getContractFactory('TokenV3')
+    const tokenV3 = await upgrades.upgradeProxy(tokenV1.address, TokenV3)
+
+    // rebase to 210m
+    // transfers are frozen
+    await expectRevert(
+      tokenV3.connect(user1).transfer(user2.address, '1'),
+      'transfers paused, rebase in progress, try again in a few minutes'
+    )
+
+    // rebase reduces balances
+    const ownerPreviousBalance = await tokenV3.balanceOf(owner.address)
+    const user1PreviousBalance = await tokenV3.balanceOf(user1.address)
+    const user2PreviousBalance = await tokenV3.balanceOf(user2.address)
+    const user3PreviousBalance = await tokenV3.balanceOf(user3.address)
+    const previousTotalSupply = await tokenV3.totalSupply()
+    await tokenV3.connect(owner).rebaseTo210M([owner.address, user1.address, user2.address, user3.address])
+    const ownerRebasedBalance = await tokenV3.balanceOf(owner.address)
+    const user1RebasedBalance = await tokenV3.balanceOf(user1.address)
+    const user2RebasedBalance = await tokenV3.balanceOf(user2.address)
+    const user3RebasedBalance = await tokenV3.balanceOf(user3.address)
+    const rebasedTotalSupply = await tokenV3.totalSupply()
+    expect(ownerPreviousBalance.gt(ownerRebasedBalance)).to.equal(true)
+    expect(user1PreviousBalance.gt(user1RebasedBalance)).to.equal(true)
+    expect(user2PreviousBalance.gt(user2RebasedBalance)).to.equal(true)
+    expect(user3PreviousBalance.gt(user3RebasedBalance)).to.equal(true)
+    expect(previousTotalSupply.gt(rebasedTotalSupply)).to.equal(true)
+
+    // set total supply to 210m (dust from each account is missing)
+    await tokenV3.connect(owner).setTotalSupplyTo210M()
+    const setTotalSupply = await tokenV3.totalSupply()
+    console.log(rebasedTotalSupply / 1e18)
+    expect(setTotalSupply / 1e18).to.equal(210000000)
+    expect(setTotalSupply.gt(rebasedTotalSupply)).to.equal(true)
+
+    // upgrade token
+    const TokenV4 = await ethers.getContractFactory('TokenV4')
+    const tokenV4 = await upgrades.upgradeProxy(tokenV1.address, TokenV4)
+
+    // rebrand to bitsocial
+    expect(await tokenV4.name()).to.equal('Bitsocial')
+    expect(await tokenV4.symbol()).to.equal('BSO')
+    // can transfer
+    await tokenV3.connect(user1).transfer(user2.address, '1')
    })
 })
