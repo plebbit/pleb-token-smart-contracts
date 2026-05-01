@@ -38,10 +38,7 @@ contract TokenV3 is
     // pause transfers while rebasing 
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override { 
         super._beforeTokenTransfer(from, to, amount); 
-        require(
-            hasRole(MIGRATOR_ROLE, _msgSender()) || from == address(0) || to == address(0), 
-            "transfers paused, rebase in progress, try again in a few minutes"
-        );
+        require(hasRole(MIGRATOR_ROLE, _msgSender()), "transfers paused, rebase in progress, try again in a few minutes");
     }
 
     function rebaseTo210M(address[] calldata holders) external onlyRole(MIGRATOR_ROLE) {
@@ -50,8 +47,8 @@ contract TokenV3 is
             address holder = holders[i];
             uint256 previousBalance = balanceOf(holder);
             if (previousBalance != 0) {
-                // 140546515332458 is ~0.000140546515332458, to convert total supply from 1.5T to 210M
-                uint256 burnAmount = previousBalance - (previousBalance * 140546515332458 / 1e18);
+                // 140556113986173 is ~0.000140556113986173, to convert total supply from 1.5T to 210M
+                uint256 burnAmount = previousBalance - (previousBalance * 140556113986173 / 1e18);
                 if (burnAmount != 0) {
                     _burn(holder, burnAmount);
                 }
