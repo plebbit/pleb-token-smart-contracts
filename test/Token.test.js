@@ -18,6 +18,14 @@ const expectRevert = async (promise, revertString) => {
   }
 }
 
+const contractDeployEstimateGas = async (contractName) => {
+  const Factory = await ethers.getContractFactory(contractName)
+  const deployTx = await Factory.getDeployTransaction()
+  const signer = (await ethers.getSigners())[0]
+  const estimatedGas = await signer.estimateGas(deployTx)
+  return estimatedGas
+}
+
 describe('Token', function () {
   it('deploys', async function () {
     const [owner, user1, user2, user3] = await ethers.getSigners()
@@ -169,6 +177,7 @@ describe('Token', function () {
     // upgrade token
     const TokenV3 = await ethers.getContractFactory('TokenV3')
     const tokenV3 = await upgrades.upgradeProxy(tokenV1.address, TokenV3)
+    // console.log('gas tokenV3', await contractDeployEstimateGas('TokenV3'))
 
     // rebase to 210m
     // transfers are frozen
