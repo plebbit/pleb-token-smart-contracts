@@ -195,10 +195,15 @@ describe('Token', function () {
     expect(user3PreviousBalance.gt(user3RebasedBalance)).to.equal(true)
     expect(previousTotalSupply.gt(rebasedTotalSupply)).to.equal(true)
 
+    // should be close to but not exactly 210mil
+    console.log(rebasedTotalSupply / 1e18)
+
+    // test burning in case it's needed
+    await tokenV3.connect(owner).burn(String(1e18))
+
     // set total supply to 210m (dust from each account is missing)
     await tokenV3.connect(owner).setTotalSupplyTo210M()
     const setTotalSupply = await tokenV3.totalSupply()
-    console.log(rebasedTotalSupply / 1e18)
     expect(setTotalSupply / 1e18).to.equal(210000000)
     expect(setTotalSupply.gt(rebasedTotalSupply)).to.equal(true)
 
@@ -209,7 +214,18 @@ describe('Token', function () {
     // rebrand to bitsocial
     expect(await tokenV4.name()).to.equal('Bitsocial')
     expect(await tokenV4.symbol()).to.equal('BSO')
+
     // can transfer
-    await tokenV3.connect(user1).transfer(user2.address, '1')
-   })
+    await tokenV4.connect(user1).transfer(user2.address, '1')
+
+    // cant burn
+    let burnError
+    try {
+      await tokenV4.connect(owner).burn(String(1e18))
+    }
+    catch (e) {
+      burnError = e.message
+    }
+    expect(burnError?.includes('burn disabled')).to.equal(true)
+  })
 })
