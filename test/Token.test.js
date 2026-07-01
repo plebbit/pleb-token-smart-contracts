@@ -236,5 +236,23 @@ describe('Token', function () {
       burnError = e.message
     }
     expect(burnError?.includes('burn disabled')).to.equal(true)
+
+    // upgrade token
+    const TokenV5 = await ethers.getContractFactory('TokenV5')
+    const tokenV5 = await upgrades.upgradeProxy(tokenV1.address, TokenV5)
+
+    // rebrand to bitsocial
+    expect(await tokenV5.name()).to.equal('Bitsocial')
+    expect(await tokenV5.symbol()).to.equal('BSO')
+
+    // cant transfer
+    let transferError
+    try {
+      await tokenV4.connect(user1).transfer(user2.address, '1')
+    }
+    catch (e) {
+      transferError = e.message
+    }
+    expect(transferError?.includes('token migrated')).to.equal(true)
   })
 })

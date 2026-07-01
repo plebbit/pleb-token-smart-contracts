@@ -22,6 +22,7 @@
     "merkletreejs": "^0.2.24"
   },
   "dependencies": {
-    "bignumber.js": "^9.1.1"
+    "bignumber.js": "^9.1.1",
+    "dotenv": "^17.4.2"
   }
 }
