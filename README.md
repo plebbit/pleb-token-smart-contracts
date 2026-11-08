@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+> **Plebbit has rebranded to [Bitsocial](https://bitsocial.net).** This repository is archived and preserved for historical reference.
+>
+> Find current projects at [@bitsocialnet](https://github.com/bitsocialnet).
+
 The PLEB token is an upgradable contract deployed at https://snowtrace.io/address/0x625fc9bb971bb305a2ad63252665dcfe9098bee9
 
 The current implementation of the contract (TokenV4.sol) is deployed at https://snowtrace.io/address/0xbdc4fd746bf7c3bdb92eb50c6db8e9caec772818
